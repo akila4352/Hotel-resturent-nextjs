@@ -14,7 +14,7 @@ const Blog = () => {
             <br />
             <Title title='Our views on marketing, design & technology' />
           </div>
-          <BlogCard />
+        
         </div>
       </section>
     </>
