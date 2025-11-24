@@ -48,7 +48,9 @@ const Header = () => {
             <Link href='/showcase' className={activeLink == "/showcase" ? "activeLink" : "none"}>
               NEAR BY PLACES
             </Link>
-           
+            <Link href='/blogs' className={activeLink == "/blogs" ? "activeLink" : "none"}>
+              BLOG
+            </Link>
         
            
           </nav>
