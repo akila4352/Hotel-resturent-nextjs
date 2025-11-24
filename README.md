@@ -1,2 +1,3 @@
-![screencapture-localhost-3000-2023-06-17-18_27_01](https://github.com/sunil9813/Creative-Agency-UI-Next-JS-/assets/67497228/04546138-7cbb-40b0-8710-ce5fed29643b)
+<img width="1898" height="869" alt="image" src="https://github.com/user-attachments/assets/8933b53d-a9e0-46c7-a307-a3519b651937" />
+
 "# Hotel-resturent-nextjs" 
