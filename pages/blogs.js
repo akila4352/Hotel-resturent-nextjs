@@ -1,4 +1,4 @@
-import { Blog } from "@/sections"
+
 import Head from "next/head"
 
 const Blogs = () => {
@@ -7,7 +7,7 @@ const Blogs = () => {
       <Head>
         <title>Blog - 7Creative</title>
       </Head>
-      <Blog />
+      
     </>
   )
 }
