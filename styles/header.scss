@@ -1,0 +1,120 @@
+header {
+  /* set header background to black and text to white */
+  background: #000;
+  color: #fff;
+  transition: background 0.25s ease, border-bottom 0.25s ease;
+  padding: $s 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(10px);
+  z-index: 999;
+  .container {
+    @include flex(center, space-between, none);
+    .logo {
+      /* ensure logo text/link is visible on dark bg */
+      a,
+      svg,
+      img {
+        color: #fff !important;
+        fill: #fff !important;
+      }
+    }
+    nav {
+      a {
+        margin: 0 $xl-2;
+        color: #fff; /* nav links white */
+        text-transform: capitalize;
+        &:hover {
+          opacity: 0.9;
+        }
+      }
+    }
+    button {
+      background: transparent;
+      border: none;
+      color: #fff; /* menu icon button white */
+      cursor: pointer;
+    }
+  }
+}
+
+/* when scrolled, make header semi-transparent with blur (not fully transparent) */
+header.transparent {
+  background: rgba(0, 0, 0, 0.45); /* translucent black */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04); /* subtle divider */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  transition: background 0.25s ease, box-shadow 0.25s ease, border-bottom 0.25s ease;
+
+  .container {
+    .logo {
+      a,
+      svg,
+      img {
+        color: #fff !important;
+        fill: #fff !important;
+      }
+    }
+    nav {
+      a {
+        color: #fff;
+      }
+    }
+    .openMenu {
+      background: rgba(0, 0, 0, 0.55); /* mobile menu matches translucent look */
+    }
+    button {
+      color: #fff;
+    }
+  }
+}
+
+.activeLink {
+  position: relative;
+  color: $green;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 48px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: $green;
+  }
+}
+
+@media screen and (max-width: 800px) {
+  header {
+    nav {
+      display: none;
+    }
+    .openMenu {
+      position: absolute;
+      top: 75px;
+      left: 0;
+      width: 100%;
+      height: 40vh;
+      padding: 20px;
+      background: #000; /* mobile menu background black */
+      display: flex;
+      flex-direction: column;
+      z-index: 999;
+      a {
+        width: 100%;
+        display: block;
+        color: #fff; /* mobile menu links white */
+        margin-bottom: 30px !important;
+      }
+    }
+    .button-primary {
+      display: none;
+    }
+  }
+  .activeLink {
+    &::after {
+      display: none;
+    }
+  }
+}
