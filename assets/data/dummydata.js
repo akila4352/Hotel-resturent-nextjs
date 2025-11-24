@@ -337,3 +337,11 @@ export const roomItems = [
     darkbtn: "book now",
   },
 ];
+// Add social icons data used by the SocialIcons component
+export const socialIconLocations = [
+  {
+    type: 'whatsapp',
+    link: 'https://wa.me/+46738939199',
+    img: '../images/logo.png',
+  },
+];
