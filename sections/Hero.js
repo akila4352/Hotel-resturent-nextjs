@@ -167,34 +167,21 @@ const Hero = () => {
       {/* Booking box positioned over the hero/carousel (fixed inside this section) */}
       <div
         ref={bookingRef} // <-- NEW: ref for booking element
+        className="booking-box"
         style={{
-          /* toggle between fixed and absolute so it "stops" at the hero bottom */
+          /* keep dynamic position (fixed/absolute) here, layout handled by CSS */
           position: isFixed ? "fixed" : "absolute",
           bottom: isFixed ? "6%" : "auto",
           top: isFixed ? "auto" : `${absTop}px`,
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 60,
-          width: "min(1040px, 94%)",
-          pointerEvents: "auto",
         }}
       >
-        <div style={{
-          background: "rgba(11,18,32,0.66)",
-          padding: "16px 18px",
-          borderRadius: 14,
-          boxShadow: "0 14px 48px rgba(2,6,23,0.65)",
-          backdropFilter: "blur(8px)",
-          color: "#fff",
-          display: "flex",
-          gap: 12,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}>
-          {/* "Where are you going?" input removed; bookings use default destination */}
-
+        <div className="booking-inner">
           <button
             type="button"
+            className="booking-date"
             onClick={() => setOpenDate((s) => !s)}
             style={{
               background: "transparent",
@@ -202,7 +189,7 @@ const Hero = () => {
               color: "#ffcf9f",
               padding: "10px 14px",
               borderRadius: 10,
-              minWidth: 240,
+              minWidth: 160, /* reduced so it fits on phones */
               fontWeight: 700,
             }}
           >
@@ -210,32 +197,31 @@ const Hero = () => {
           </button>
 
           {/* guest/room controls */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "6px 8px", borderRadius: 8 }}>
-              <label style={{ color: "#fff", fontSize: 13, marginRight: 6 }}>Adult</label>
-              <button onClick={() => handleOption("adult", "d")} style={{ width: 28, height: 28 }}>−</button>
-              <span style={{ minWidth: 26, textAlign: "center" }}>{options.adult}</span>
-              <button onClick={() => handleOption("adult", "i")} style={{ width: 28, height: 28 }}>+</button>
+          <div className="booking-controls">
+            <div className="group">
+              <label>Adult</label>
+              <button onClick={() => handleOption("adult", "d")}>−</button>
+              <span>{options.adult}</span>
+              <button onClick={() => handleOption("adult", "i")}>+</button>
             </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "6px 8px", borderRadius: 8 }}>
-              <label style={{ color: "#fff", fontSize: 13, marginRight: 6 }}>Children</label>
-              <button onClick={() => handleOption("children", "d")} style={{ width: 28, height: 28 }}>−</button>
-              <span style={{ minWidth: 26, textAlign: "center" }}>{options.children}</span>
-              <button onClick={() => handleOption("children", "i")} style={{ width: 28, height: 28 }}>+</button>
+            <div className="group">
+              <label>Children</label>
+              <button onClick={() => handleOption("children", "d")}>−</button>
+              <span>{options.children}</span>
+              <button onClick={() => handleOption("children", "i")}>+</button>
             </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "6px 8px", borderRadius: 8 }}>
-              <label style={{ color: "#fff", fontSize: 13, marginRight: 6 }}>Room</label>
-              <button onClick={() => handleOption("room", "d")} style={{ width: 28, height: 28 }}>−</button>
-              <span style={{ minWidth: 26, textAlign: "center" }}>{options.room}</span>
-              <button onClick={() => handleOption("room", "i")} style={{ width: 28, height: 28 }}>+</button>
+            <div className="group">
+              <label>Room</label>
+              <button onClick={() => handleOption("room", "d")}>−</button>
+              <span>{options.room}</span>
+              <button onClick={() => handleOption("room", "i")}>+</button>
             </div>
           </div>
-
-
 
           <button
             onClick={handleBookNow}
             disabled={submitting}
+            className="booking-cta"
             style={{
               background: "linear-gradient(90deg,#ff7a59,#ffbf69)",
               color: "#0b1220",
@@ -243,7 +229,6 @@ const Hero = () => {
               padding: "10px 16px",
               borderRadius: 10,
               fontWeight: 700,
-              marginLeft: 8,
               opacity: submitting ? 0.8 : 1,
               cursor: submitting ? "wait" : "pointer",
             }}

@@ -3,7 +3,7 @@
   text-align: center;
   padding: $xl-6 0;
   padding-top: $xll-3;
-  height: 90vh !important;
+  height: min(100vh, 720px) !important; /* limit on very tall phones */
   overflow: hidden !important;
   position: relative;
   &::before {
@@ -20,24 +20,23 @@
     overflow-x: hidden !important;
   }
   .hero-title {
-    font-size: $xll-3;
-    line-height: 115px;
+    font-size: clamp(20px, 6.5vw, 48px);
+    line-height: 1.05;
     font-weight: 600;
     margin: $xl-6 0;
   }
-  .sub-heading {
-    display: flex;
-    justify-content: center;
-    .titleSm {
-      margin: 0 $xl-1;
-    }
-    span {
-      font-size: $xll;
-      line-height: 0;
-      color: $green;
-    }
+}
+
+/* reduce hero section on small screens */
+@media screen and (max-width: 768px) {
+  .hero {
+    padding: $xl-4 0;
+    height: auto !important;
+    min-height: 56vh;
+    &::before { left: -60%; background-size: cover; opacity: 0.9; }
   }
 }
+
 .hero-sec {
   position: relative;
   &::before {
@@ -71,7 +70,7 @@
     @include flex(center, space-between, none);
   }
 }
-
+ 
 //testimonial
 .testimonial {
   .card {
@@ -372,5 +371,68 @@ footer {
       }
       flex-direction: column;
     }
+  }
+}
+
+/* Booking box responsive layout */
+.booking-box {
+  width: min(1040px, 94%);
+  pointer-events: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  .booking-inner {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    background: rgba(11,18,32,0.66);
+    padding: 12px;
+    border-radius: 14px;
+    box-shadow: 0 14px 48px rgba(2,6,23,0.65);
+    backdrop-filter: blur(8px);
+    color: #fff;
+  }
+  .booking-date {
+    font-weight: 700;
+    color: #ffcf9f;
+  }
+  .booking-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    .group {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      background: rgba(255,255,255,0.03);
+      padding: 6px 8px;
+      border-radius: 8px;
+      label { color: #fff; font-size: 13px; margin-right: 6px; }
+      button { width: 28px; height: 28px; }
+      span { min-width: 26px; text-align: center; display: inline-block; }
+    }
+  }
+  .booking-cta { margin-left: 8px; }
+
+  @media screen and (max-width: 760px) {
+    width: calc(100% - 32px);
+    left: 50%;
+    transform: translateX(-50%);
+    .booking-inner {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .booking-date,
+    .booking-cta {
+      width: 100%;
+    }
+    .booking-controls {
+      width: 100%;
+      justify-content: space-between;
+      .group { flex: 1; justify-content: space-between; min-width: 0; }
+    }
+    .booking-cta { margin-left: 0; margin-top: 8px; }
   }
 }

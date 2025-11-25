@@ -19,7 +19,7 @@ header {
         color: #fff !important;
         fill: #fff !important;
       }
-    }
+    } 
     nav {
       a {
         margin: 0 $xl-2;
@@ -85,6 +85,26 @@ header.transparent {
   }
 }
 
+@media screen and (max-width: 900px) {
+  header {
+    /* reduce padding on small screens */
+    padding: $s 0;
+    .container {
+      @include flex(center, space-between, none);
+      nav {
+        a {
+          margin: 0 $xl-1;
+          font-size: $sm;
+        }
+      }
+      .logo { 
+        a, svg, img { font-size: 18px; }
+      }
+    }
+  }
+}
+
+/* mobile menu tweaks */
 @media screen and (max-width: 800px) {
   header {
     nav {
@@ -92,20 +112,23 @@ header.transparent {
     }
     .openMenu {
       position: absolute;
-      top: 75px;
+      top: 60px; /* slightly higher to fit smaller headers */
       left: 0;
       width: 100%;
-      height: 40vh;
-      padding: 20px;
-      background: #000; /* mobile menu background black */
+      height: auto; /* allow content-determined height */
+      max-height: 60vh;
+      padding: 16px;
+      background: #000;
       display: flex;
       flex-direction: column;
       z-index: 999;
+      overflow-y: auto;
       a {
         width: 100%;
         display: block;
-        color: #fff; /* mobile menu links white */
-        margin-bottom: 30px !important;
+        color: #fff;
+        margin-bottom: 18px !important;
+        font-size: $md;
       }
     }
     .button-primary {

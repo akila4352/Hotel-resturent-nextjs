@@ -122,14 +122,14 @@ export default function Carousel({ items = [] }) {
 		return (
 			<div
 				className="carousel-wrapper"
-				style={{ position: "relative", top: 0, left: 0, width: "100%", height: "100vh", zIndex: 0 }}
+				style={{ position: "relative", top: 0, left: 0, width: "100%", height: "min(100vh, 720px)", zIndex: 0 }}
 			>
-				<div className="slide-item" style={{ position: "relative", width: "100%", height: "100vh" }}>
+				<div className="slide-item" style={{ position: "relative", width: "100%", height: "min(100vh, 720px)" }}>
 					{first.img && (
 						<div
 							style={{
 								width: "100%",
-								height: "100vh",
+								height: "100%",
 								backgroundImage: `url(${first.img})`,
 								backgroundSize: "cover",
 								backgroundPosition: "center",
@@ -241,9 +241,9 @@ export default function Carousel({ items = [] }) {
 	return (
 		<div
 			className="carousel-wrapper"
-			style={{ position: "relative", top: 0, left: 0, width: "100%", height: "100vh", zIndex: 0 }}
+			style={{ position: "relative", top: 0, left: 0, width: "100%", height: "min(100vh, 720px)", zIndex: 0 }}
 		>
-			<div id="header-carousel" className="carousel slide" style={{ height: "100vh", width: "100%" }}>
+			<div id="header-carousel" className="carousel slide" style={{ height: "min(100vh, 720px)", width: "100%" }}>
 				<div className="carousel-inner" style={{ height: "100%" }}>
 					<Slider ref={sliderRef} {...sliderSettings}>
 						{slides.map((val, index) => {
@@ -256,7 +256,7 @@ export default function Carousel({ items = [] }) {
 									key={index}
 									onMouseMove={handleMouseMove}
 									onMouseLeave={handleMouseLeave}
-									style={{ position: "relative", width: "100%", height: "100vh" }}
+									style={{ position: "relative", width: "100%", height: "min(100vh, 720px)" }}
 								>
 									{/* invisible preloader img */}
 									<img
@@ -278,7 +278,7 @@ export default function Carousel({ items = [] }) {
 											}}
 											style={{
 												width: "110%", // larger to allow parallax + zoom edges
-												height: "110vh",
+												height: "110%" /* changed from fixed vh to % so it scales with container */,
 												objectFit: "cover",
 												display: "block",
 												position: "absolute",
@@ -362,7 +362,7 @@ export default function Carousel({ items = [] }) {
 				.slide-item { --tx: 0px; --ty: 0px; --ox: 0px; --oy: 0px; height: 100vh; position: relative; overflow: hidden; }
 				.slide-bg { position: absolute; inset: 0; overflow: hidden; }
 				.slide-bg img { will-change: transform; }
-
+ 
 				/* decorative floating shapes */
 				.shape { position: absolute; border-radius: 50%; opacity: 0.12; filter: blur(6px); pointer-events: none; }
 				.shape-1 { width: 220px; height: 220px; background: radial-gradient(circle at 30% 30%, #ff7a59, transparent 40%); left: -60px; top: 10%; animation: floatSlow 8s ease-in-out infinite; transform: translateZ(0); }
@@ -415,10 +415,14 @@ export default function Carousel({ items = [] }) {
 
 				/* responsive */
 				@media (max-width: 900px) {
-					.hero-title { font-size: clamp(20px, 6.5vw, 34px); }
-					.hero-sub { font-size: 14px; }
+					/* Fix typo and update styles for small screens:
+					   - make title wrap and allow explicit <br/>
+					   - move overlay to left, align text left, and reduce width for better layout */
+					.hero-title { font-size: clamp(20px, 6.5vw, 34px); padding: 12px 16px; white-space: normal; word-break: break-word; }
+					.hero-title br { display: block; line-height: 1.05; } /* if markup includes <br/> it will act as a break */
+					.hero-sub { font-size: 14px; text-align: left; margin-left: 0; }
 					.shape-1, .shape-2 { display: none; }
-					.hero-overlay { top: 42%; } /* slightly higher on small screens for better visual */
+					.hero-overlay { top: 42%; left: 12%; transform: translate(0, -50%); text-align: left; width: 76%; padding: 0 8px; }
 				}
 			`}</style>
 		</div>

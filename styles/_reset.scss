@@ -9,9 +9,11 @@ body {
   background-color: $dark;
   color: $white;
 }
+/* replace loose container sizing with a fixed max and side padding for small screens */
 .container {
-  max-width: 90%;
-  margin: auto;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
 a {
@@ -52,4 +54,10 @@ h5 {
 ul {
   text-decoration: none;
   list-style-type: none;
+}
+@media screen and (max-width: 500px) {
+  .container {
+    max-width: 100%;
+    padding: 0 16px;
+  }
 }
