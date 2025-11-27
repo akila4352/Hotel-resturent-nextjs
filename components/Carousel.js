@@ -17,22 +17,12 @@ export default function Carousel({ items = [] }) {
 
 	// default slides (use public/ folder paths)
 	const defaultSlides = [
-		{
-			img: "/images/b2.jpg",
-			title: "Hotel Amore",
-			subtitle: "Relax, Dine & Rejuvenate",
-			btn1: "Book Now",
-			btn2: "Learn More",
-			navigatePath: "/",
-		},
-		{
-			img: "/images/b3.jpg",	
-			title: "Seaside Dining",
-			subtitle: "Fresh local flavors",
-			btn1: "Reserve",
-			btn2: "View Menu",
-			navigatePath: "/menu",
-		},
+		{ img: "/images/b1.jpg", title: "Hotel Amore", subtitle: "Relax, Dine & Rejuvenate", btn1: "Book Now", btn2: "Learn More", navigatePath: "/" },
+		{ img: "/images/b3.jpg", title: "Elegant Lobby", subtitle: "Warm welcome", btn1: "Explore", btn2: "Details", navigatePath: "/" },
+		{ img: "/images/b4.jpeg", title: "Fine Dining", subtitle: "Fresh local flavors", btn1: "Reserve", btn2: "Menu", navigatePath: "/menu" },
+		{ img: "/images/b5.jpg", title: "Cozy Rooms", subtitle: "Restful nights", btn1: "Book", btn2: "Rooms", navigatePath: "/rooms" },
+		{ img: "/images/b6.jpg", title: "Poolside", subtitle: "Relax & unwind", btn1: "Reserve", btn2: "Gallery", navigatePath: "/amenities" },
+		{ img: "/images/b7.jpg", title: "Nearby Attractions", subtitle: "Explore the area", btn1: "Discover", btn2: "Map", navigatePath: "/showcase" },
 	];
 
 	const slides = items && items.length ? items : defaultSlides;
@@ -188,7 +178,7 @@ export default function Carousel({ items = [] }) {
 	// 	const { name, value } = e.target;
 	// 	setBookingForm((prev) => ({ ...prev, [name]: value }));
 	// };
-
+ 
 	// const handleBookingSubmit = async (e) => {
 	// 	e.preventDefault();
 	// 	setSubmittingBooking(true);
@@ -303,6 +293,8 @@ export default function Carousel({ items = [] }) {
 										aria-hidden
 										key={captionKey + "-" + index}
 									>
+										{/* optional small script / brand line (provide val.brand in slide objects to show) */}
+										{val.brand && <div className="hero-brand">{val.brand}</div>}
 										<h1 className="hero-title">{val.title}</h1>
 										<p className="hero-sub">{val.subtitle}</p>
 									</div>
@@ -358,8 +350,12 @@ export default function Carousel({ items = [] }) {
 
 			{/* scoped styles for animation, Ken-Burns, parallax and caption */}
 			<style jsx>{`
-				.carousel-wrapper { overflow: hidden; }
-				.slide-item { --tx: 0px; --ty: 0px; --ox: 0px; --oy: 0px; height: 100vh; position: relative; overflow: hidden; }
+				/* import display + script fonts to match the example */
+				@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Dancing+Script:wght@400;700&family=Lora:wght@400;600&family=Playfair+Display:wght@600;800&display=swap');
+
+ 				.carousel-wrapper { overflow: hidden; }
+				/* keep slides responsive and clamp height instead of forcing full viewport */
+				.slide-item { --tx: 0px; --ty: 0px; --ox: 0px; --oy: 0px; height: min(100vh, 720px); position: relative; overflow: hidden; }
 				.slide-bg { position: absolute; inset: 0; overflow: hidden; }
 				.slide-bg img { will-change: transform; }
  
@@ -390,12 +386,15 @@ export default function Carousel({ items = [] }) {
 					opacity: 1; 
 					pointer-events: auto; /* <- keep so overlay remains interactive if needed */
 				}
-				/* responsive, clamped font size so it scales and wraps nicely */
+				/* Title: elegant high-contrast serif similar to the example */
 				.hero-title {
-					font-size: clamp(28px, 5.5vw, 56px);
+					/* use a handwritten/script display first, keep Playfair as fallback */
+					font-family: "Dancing Script", "Great Vibes", "Playfair Display", serif;
+					font-size: clamp(34px, 6.0vw, 78px);
 					line-height: 1.02;
-					margin: 0 0 10px;
+					margin: 6px 0 12px;
 					font-weight: 800;
+					letter-spacing: -0.02em;
 					text-shadow: 0 18px 48px rgba(0,0,0,0.6);
 					transform: translateY(6px);
 					transition: transform 650ms cubic-bezier(.2,.9,.3,1), opacity 600ms;
@@ -404,8 +403,30 @@ export default function Carousel({ items = [] }) {
 					word-break: break-word;    /* break long words if needed */
 				}
 				.hero-overlay.visible .hero-title { opacity: 1; transform: translateY(0); }
-				.hero-sub { margin: 0 auto 18px; color: rgba(255,255,255,0.92); font-size: 16px; letter-spacing: 0.6px; opacity: 0; transform: translateY(6px); transition: transform 700ms 80ms, opacity 700ms 80ms; }
+				/* Subtitle: classic readable serif to pair with Playfair */
+				.hero-sub { 
+					/* apply a lighter script/handwriting feel while keeping Lora as fallback for readability */
+					font-family: "Dancing Script", "Lora", serif;
+					margin: 0 auto 18px;
+					color: rgba(255,255,255,0.92);
+					font-size: clamp(14px, 1.8vw, 18px);
+					letter-spacing: 0.2px;
+					opacity: 0;
+					transform: translateY(6px);
+					transition: transform 700ms 80ms, opacity 700ms 80ms;
+				}
 				.hero-overlay.visible .hero-sub { opacity: 1; transform: translateY(0); }
+
+				/* optional small script / brand above the title */
+				.hero-brand {
+					font-family: "Great Vibes", cursive;
+					font-size: clamp(16px, 2.6vw, 34px);
+					color: rgba(255,255,255,0.95);
+					opacity: 0.95;
+					margin-bottom: 6px;
+					letter-spacing: 0.6px;
+					text-shadow: 0 6px 18px rgba(0,0,0,0.45);
+				}
 
 				.hero-cta { display: inline-flex; gap: 12px; margin-top: 12px; opacity: 0; transform: translateY(6px); transition: opacity 800ms 160ms, transform 800ms 160ms; }
 				.hero-overlay.visible .hero-cta { opacity: 1; transform: translateY(0); }
@@ -415,16 +436,88 @@ export default function Carousel({ items = [] }) {
 
 				/* responsive */
 				@media (max-width: 900px) {
-					/* Fix typo and update styles for small screens:
-					   - make title wrap and allow explicit <br/>
-					   - move overlay to left, align text left, and reduce width for better layout */
-					.hero-title { font-size: clamp(20px, 6.5vw, 34px); padding: 12px 16px; white-space: normal; word-break: break-word; }
+					/* larger responsive title/subtitle */
+					.hero-title {
+						font-size: clamp(24px, 7.5vw, 40px);
+						padding: 12px 16px;
+						white-space: normal;
+						word-break: break-word;
+						font-family: "Dancing Script", "Great Vibes", "Playfair Display", serif;
+					}
 					.hero-title br { display: block; line-height: 1.05; } /* if markup includes <br/> it will act as a break */
-					.hero-sub { font-size: 14px; text-align: left; margin-left: 0; }
+					.hero-sub {
+						font-size: 16px;
+						text-align: left;
+						margin-left: 0;
+						font-family: "Dancing Script", "Lora", serif;
+					}
 					.shape-1, .shape-2 { display: none; }
-					.hero-overlay { top: 42%; left: 12%; transform: translate(0, -50%); text-align: left; width: 76%; padding: 0 8px; }
+					/* shift overlay left so user sees text immediately on smaller viewports */
+					.hero-overlay { top: 42%; left: 8%; transform: translate(0, -50%); text-align: left; width: 78%; padding: 0 8px; }
 				}
-			`}</style>
+
+				@media (max-width: 760px) {
+					/* slightly larger mobile sizes to improve legibility */
+					.carousel-wrapper,
+					.slide-item {
+						height: 320px !important;
+					}
+					.slide-bg img {
+						width: 120%;
+						height: 120%;
+						transform: translate(-50%, -50%) translate(var(--tx, 0), var(--ty, 0)) scale(1.06);
+					}
+					/* keep overlay left-aligned and readable on compact heights */
+					.hero-overlay { top: 40%; left: 6%; transform: translate(0, -50%); text-align: left; width: 84%; padding: 0 10px; z-index: 9; }
+					.hero-title { font-size: clamp(22px, 7.2vw, 36px); }
+					.hero-sub { font-size: 16px; }
+				}
+
+				@media (max-width: 480px) {
+					/* compact phones — keep text larger for readability */
+					.carousel-wrapper,
+					.slide-item {
+						height: 280px !important;
+					}
+					.shape-1, .shape-2 { display: none; }
+
+					.hero-overlay {
+						top: 44%;
+						left: 6%;
+						transform: translate(0, -50%);
+						text-align: left;
+						width: 88%;
+						padding: 0 10px;
+						z-index: 10;
+						pointer-events: auto;
+					}
+					.hero-title {
+						font-size: clamp(20px, 8.0vw, 32px);
+						line-height: 1.04;
+						text-shadow: 0 12px 36px rgba(0,0,0,0.55);
+					}
+					.hero-sub {
+						font-size: 15px;
+						color: rgba(255,255,255,0.95);
+						text-align: left;
+						font-family: "Dancing Script", "Lora", serif;
+					}
+					.hero-brand { font-size: clamp(12px, 3.6vw, 20px); }
+
+					/* ensure prev/next controls sit inside the hero and remain tappable */
+					button[aria-label="Previous slide"],
+					button[aria-label="Next slide"] {
+						top: auto;
+						bottom: 10px;
+						transform: none;
+						width: 40px;
+						height: 40px;
+						opacity: 0.95;
+					}
+					button[aria-label="Previous slide"] { left: 12px; }
+					button[aria-label="Next slide"] { right: 12px; }
+				}
+ 			`}</style>
 		</div>
 	);
 }

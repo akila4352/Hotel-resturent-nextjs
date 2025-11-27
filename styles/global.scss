@@ -3,8 +3,10 @@
   text-align: center;
   padding: $xl-6 0;
   padding-top: $xll-3;
-  height: min(100vh, 720px) !important; /* limit on very tall phones */
-  overflow: hidden !important;
+  /* let the hero flow by default so responsive layouts (mobile) can shrink/stack naturally */
+  height: auto;
+  min-height: min(60vh, 720px); /* reasonable minimum to keep hero visible */
+  overflow: hidden;
   position: relative;
   &::before {
     content: "";
@@ -17,7 +19,7 @@
     background-size: cover;
     background-position: center;
     z-index: -1;
-    overflow-x: hidden !important;
+    overflow-x: hidden;
   }
   .hero-title {
     font-size: clamp(20px, 6.5vw, 48px);
@@ -27,13 +29,26 @@
   }
 }
 
+/* apply full-viewport hero height only on larger screens */
+@media screen and (min-width: 900px) {
+  .hero {
+    height: min(100vh, 720px);
+    overflow: hidden;
+  }
+}
+
 /* reduce hero section on small screens */
 @media screen and (max-width: 768px) {
   .hero {
     padding: $xl-4 0;
-    height: auto !important;
+    height: auto; /* ensure mobile keeps auto height */
     min-height: 56vh;
     &::before { left: -60%; background-size: cover; opacity: 0.9; }
+  }
+
+  /* remove hero decorative background image on narrow screens so booking box sits on plain background */
+  .hero::before {
+    display: none;
   }
 }
 
@@ -69,7 +84,7 @@
     background: $gradient;
     @include flex(center, space-between, none);
   }
-}
+} 
  
 //testimonial
 .testimonial {
@@ -380,23 +395,47 @@ footer {
   pointer-events: auto;
   left: 50%;
   transform: translateX(-50%);
+
+  /* outer container transparent — single white layer is .booking-inner */
+  background: transparent;
+
   .booking-inner {
     display: flex;
     gap: 12px;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    background: rgba(11,18,32,0.66);
-    padding: 12px;
-    border-radius: 14px;
-    box-shadow: 0 14px 48px rgba(2,6,23,0.65);
-    backdrop-filter: blur(8px);
-    color: #fff;
+    background: rgba(255,255,255,0.96); /* adjust inner panel alpha here (0.96) */
+    color: $dark;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(11,18,32,0.06);
+    box-shadow: 0 6px 18px rgba(11,18,32,0.06);
   }
+
   .booking-date {
-    font-weight: 700;
-    color: #ffcf9f;
+    /* translucent white pill - adjust alpha to control pill transparency */
+    background: rgba(255,255,255,0.88); /* adjust pill alpha here (0.88) */
+    color: $dark;
+    font-weight: 800;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 8px 12px;
+    border: 1px solid rgba(11,18,32,0.06);
+    box-shadow: 0 2px 8px rgba(11,18,32,0.04);
+    min-width: 140px;
+
+    .date-label { flex: 1 1 auto; }
+    .date-icon { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; }
+
+    /* small visual tweak so calendar icon appears gold on white pill (optional) */
+    .date-icon svg { color: #b5863a; fill: currentColor; }
   }
+
   .booking-controls {
     display: flex;
     gap: 8px;
@@ -406,14 +445,16 @@ footer {
       display: flex;
       gap: 6px;
       align-items: center;
-      background: rgba(255,255,255,0.03);
-      padding: 6px 8px;
+      background: rgba(255,255,255,0.90); /* adjust control card alpha here (0.90) */
+      padding: 8px 10px;
       border-radius: 8px;
-      label { color: #fff; font-size: 13px; margin-right: 6px; }
-      button { width: 28px; height: 28px; }
-      span { min-width: 26px; text-align: center; display: inline-block; }
+      label { color: $dark; font-size: 13px; margin-right: 6px; display:flex; align-items:center; gap:6px; }
+      button { width: 36px; height: 36px; padding: 6px; background: transparent; border: 1px solid rgba(11,18,32,0.06); border-radius:6px; cursor:pointer; color: $dark; }
+      span { min-width: 26px; text-align: center; display: inline-block; color: $dark; }
+      svg { color: rgba($dark,0.7); display: inline-block; vertical-align: middle; }
     }
   }
+
   .booking-cta { margin-left: 8px; }
 
   @media screen and (max-width: 760px) {
@@ -423,16 +464,90 @@ footer {
     .booking-inner {
       flex-direction: column;
       align-items: stretch;
+      gap: 10px;
     }
+
+    /* make each date pill full width and visually separated as in screenshot */
     .booking-date,
-    .booking-cta {
+    .booking-date.booking-date-end {
       width: 100%;
+      padding: 14px 16px;
+      font-size: 15px;
+      min-width: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 6px;
     }
+
     .booking-controls {
       width: 100%;
       justify-content: space-between;
-      .group { flex: 1; justify-content: space-between; min-width: 0; }
+      .group { flex: 1 1 100%; justify-content: space-between; min-width: 0; padding: 12px 14px; }
+      /* stack control groups vertically if narrow */
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-    .booking-cta { margin-left: 0; margin-top: 8px; }
+
+    .booking-cta { margin-left: 0; margin-top: 8px; width: 100%; padding: 14px 16px; font-size: 16px; }
+
+    /* increase icon sizes for touch */
+    .booking-controls .group button { width: 44px; height: 44px; }
+    .booking-date .date-icon svg { width: 22px; height: 22px; }
+
+    /* force the inner panel to solid white on mobile for better contrast */
+    .booking-inner {
+      background: #ffffff !important;
+      padding: 14px !important;
+    }
+
+    /* when BookingBox is rendered inline (forceStatic/mobile) ensure only this area is white */
+    &.mobile-static {
+      background: transparent; /* keep wrapper transparent */
+      .booking-inner {
+        background: #ffffff !important; /* solid white panel */
+        border: 1px solid rgba(11,18,32,0.06);
+        box-shadow: 0 8px 28px rgba(11,18,32,0.09);
+        border-radius: 12px;
+      }
+      /* lift the mobile booking block up to overlap the compact carousel (reduced overlap) */
+      margin-top: -24px;
+      z-index: 70;
+    }
+
+    /* Mobile overrides: stronger border and black icons for better contrast */
+    .booking-controls .group button {
+      border: 1px solid rgba(11,18,32,0.12); /* slightly darker border on mobile */
+      color: #000 !important;                 /* ensure button text/icon inherits black */
+      background: #fff !important;
+    }
+
+    /* Force SVG icons inside controls to be black (some rules may override inheritance) */
+    .booking-controls .group button svg,
+    .booking-controls .group svg {
+      color: #000 !important;
+      fill: #000 !important;
+      stroke: #000 !important;
+    }
+
+    /* Make booking pill border a bit more defined on mobile */
+    .booking-date {
+      border: 1px solid rgba(11,18,32,0.08);
+    }
+
+    /* When rendered inline (mobile-static), make inner border slightly stronger too */
+    &.mobile-static .booking-inner {
+      border: 1px solid rgba(11,18,32,0.08);
+    }
   }
+}
+
+/* small icon helpers for booking box */
+.booking-box .icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }

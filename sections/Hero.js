@@ -14,6 +14,7 @@ import { format } from "date-fns"
 import { useRouter } from "next/router"
 import { rtdb } from "@/lib/firebase"
 import { ref as dbRef, push } from "firebase/database"
+import BookingBox from "@/components/BookingBox"
 
 const Hero = () => {
   const router = useRouter()
@@ -24,15 +25,26 @@ const Hero = () => {
   const [range, setRange] = useState([
     { startDate: new Date(), endDate: new Date(), key: "selection" },
   ])
+  const bookingRef = useRef(null)       // booking box element
   const calendarRef = useRef(null)
   const [options, setOptions] = useState({ adult: 1, children: 0, room: 1 })
   const [submitting, setSubmitting] = useState(false)
 
   // --- NEW: refs + state for sticky/stop behavior ---
   const heroRef = useRef(null)          // anchor hero section
-  const bookingRef = useRef(null)       // booking box element
   const [isFixed, setIsFixed] = useState(true) // toggles fixed vs stopped
   const [absTop, setAbsTop] = useState(0)      // when stopped, absolute top position (document px)
+
+  // NEW: detect mobile breakpoint so BookingBox can be placed inline
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    function updateMobile() {
+      setIsMobile(window.innerWidth <= 760)
+    }
+    updateMobile()
+    window.addEventListener("resize", updateMobile)
+    return () => window.removeEventListener("resize", updateMobile)
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -124,22 +136,44 @@ const Hero = () => {
       <section
         className='hero'
         ref={heroRef} // <-- NEW: anchor hero for measurements
-        style={{ margin: 0, padding: 0, overflowX: "hidden" }} // hide horizontal overflow
+        style={{ margin: 0, padding: 0, overflowX: "hidden" }} // removed forced height so carousel can be shorter on mobile
       >
         <div
           className='container'
           style={{
             position: 'relative',
             width: '100vw',       // full viewport width to remove container gutters
-            maxWidth: '100vw',    // prevent any max-width from CSS
+            maxWidth: '100vw',
             boxSizing: 'border-box',
-            height: '100vh',
+            // height: '100vh',      <-- removed to allow responsive carousel height on small screens
             margin: 0,
             padding: 0,
-            overflowX: 'hidden',  // ensure no horizontal scroll inside
+            overflowX: 'hidden',
           }}
         >
-          <Carousel />
+          <Carousel compact={isMobile} />
+
+          {/* NEW: render booking box inline inside hero on small screens so it pushes content */}
+          {isMobile && (
+            /* pull booking up so it overlaps the reduced carousel height (adjust -24px as needed) */
+            <div style={{ marginTop: -24, padding: "0 16px", boxSizing: "border-box" }}>
+               <BookingBox
+                 bookingRef={bookingRef}
+                 calendarRef={calendarRef}
+                 isFixed={isFixed}
+                 absTop={absTop}
+                 openDate={openDate} 
+                 setOpenDate={setOpenDate}
+                 range={range}
+                 setRange={setRange}
+                 options={options}
+                 handleOption={handleOption}
+                 handleBookNow={handleBookNow}
+                 submitting={submitting}
+                 forceStatic={true} // force static flow on mobile
+               />
+             </div>
+           )}
         </div>
       </section>
 
@@ -164,105 +198,23 @@ const Hero = () => {
       <Testimonial />
       <ShowCase />
 
-      {/* Booking box positioned over the hero/carousel (fixed inside this section) */}
-      <div
-        ref={bookingRef} // <-- NEW: ref for booking element
-        className="booking-box"
-        style={{
-          /* keep dynamic position (fixed/absolute) here, layout handled by CSS */
-          position: isFixed ? "fixed" : "absolute",
-          bottom: isFixed ? "6%" : "auto",
-          top: isFixed ? "auto" : `${absTop}px`,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 60,
-        }}
-      >
-        <div className="booking-inner">
-          <button
-            type="button"
-            className="booking-date"
-            onClick={() => setOpenDate((s) => !s)}
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(255,255,255,0.08)",
-              color: "#ffcf9f",
-              padding: "10px 14px",
-              borderRadius: 10,
-              minWidth: 160, /* reduced so it fits on phones */
-              fontWeight: 700,
-            }}
-          >
-            {`${format(range[0].startDate, "MM/dd/yyyy")} → ${format(range[0].endDate, "MM/dd/yyyy")}`}
-          </button>
-
-          {/* guest/room controls */}
-          <div className="booking-controls">
-            <div className="group">
-              <label>Adult</label>
-              <button onClick={() => handleOption("adult", "d")}>−</button>
-              <span>{options.adult}</span>
-              <button onClick={() => handleOption("adult", "i")}>+</button>
-            </div>
-            <div className="group">
-              <label>Children</label>
-              <button onClick={() => handleOption("children", "d")}>−</button>
-              <span>{options.children}</span>
-              <button onClick={() => handleOption("children", "i")}>+</button>
-            </div>
-            <div className="group">
-              <label>Room</label>
-              <button onClick={() => handleOption("room", "d")}>−</button>
-              <span>{options.room}</span>
-              <button onClick={() => handleOption("room", "i")}>+</button>
-            </div>
-          </div>
-
-          <button
-            onClick={handleBookNow}
-            disabled={submitting}
-            className="booking-cta"
-            style={{
-              background: "linear-gradient(90deg,#ff7a59,#ffbf69)",
-              color: "#0b1220",
-              border: "none",
-              padding: "10px 16px",
-              borderRadius: 10,
-              fontWeight: 700,
-              opacity: submitting ? 0.8 : 1,
-              cursor: submitting ? "wait" : "pointer",
-            }}
-          >
-            {submitting ? "Saving..." : "Book Now"}
-          </button>
-        </div>
-
-        {/* DateRange popup */}
-        {openDate && (
-          /* position calendar above the fixed booking box */
-          <div ref={calendarRef} style={{
-            position: "absolute",
-            bottom: "100%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            marginBottom: 12,
-            zIndex: 80,
-          }}>
-            <DateRange
-              ranges={range}
-              onChange={(item) => setRange([item.selection])}
-              moveRangeOnFirstSelection={false}
-              minDate={new Date()}
-              months={2}
-              direction="horizontal"
-              showSelectionPreview={true}
-              editableDateInputs={true}
-              showMonthAndYearPickers={true}
-              rangeColors={["#3b82f6"]}
-            />
-          </div>
-        )}
-      </div>
+      {/* keep desktop/large-screen booking box in original place */}
+      {!isMobile && (
+        <BookingBox
+          bookingRef={bookingRef}
+          calendarRef={calendarRef}
+          isFixed={isFixed}
+          absTop={absTop}
+          openDate={openDate}
+          setOpenDate={setOpenDate}
+          range={range}
+          setRange={setRange}
+          options={options}
+          handleOption={handleOption}
+          handleBookNow={handleBookNow}
+          submitting={submitting}
+        />
+      )}
     </>
   )
 }

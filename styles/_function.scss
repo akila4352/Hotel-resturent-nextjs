@@ -34,7 +34,7 @@
 @media screen and (max-width: 600px) {
   .grid-6,
   .grid-4,
-  .grid-3,
+  .grid-3, 
   .grid-2 {
     @include grid(repeat(1, 1fr), 24px);
   }

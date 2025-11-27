@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { TitleLogo } from "./Title"
+// replace TitleLogo import with Next.js Image
+import Image from "next/image"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 import { RiMenu4Line } from "react-icons/ri"
@@ -31,7 +32,16 @@ const Header = () => {
         <div className='container'>
           <div className='logo'>
             <Link href='/'>
-              <TitleLogo title='AMORE' caption='' className='logomin' />
+              {/* increased logo size to 180x60 */}
+              <Image
+                src="/images/logo1.png"
+                alt="AMORE logo"
+                width={180}
+                height={60}
+                priority
+                style={{ objectFit: "contain" }}
+                className="logomin"
+              />
             </Link>
           </div>
           <nav className={open ? "openMenu" : "closeMenu"} onClick={() => setOpen(null)}>
