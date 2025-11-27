@@ -10,6 +10,7 @@ const Header = () => {
   const [activeLink, setActiveLink] = useState("")
   const [open, setOpen] = useState(false)
   const [transparent, setTransparent] = useState(false)
+  const [zoom, setZoom] = useState(false) // added zoom state for logo hover effect
 
   const router = useRouter()
   useEffect(() => {
@@ -31,15 +32,23 @@ const Header = () => {
       <header className={transparent ? "transparent" : ""}>
         <div className='container'>
           <div className='logo'>
-            <Link href='/'>
-              {/* increased logo size to 180x60 */}
+            <Link
+              href='/'
+              onMouseEnter={() => setZoom(true)}
+              onMouseLeave={() => setZoom(false)}
+            >
+              {/* increased logo size to 260x80 and added zoom transition */}
               <Image
                 src="/images/logo1.png"
                 alt="AMORE logo"
-                width={180}
-                height={60}
+                width={260}
+                height={80}
                 priority
-                style={{ objectFit: "contain" }}
+                style={{
+                  objectFit: "contain",
+                  transition: "transform 220ms ease",
+                  transform: zoom ? "scale(1.15)" : "scale(1)"
+                }}
                 className="logomin"
               />
             </Link>

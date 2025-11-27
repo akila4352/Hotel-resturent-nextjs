@@ -160,7 +160,7 @@ export default function Carousel({ items = [] }) {
 		el.style.setProperty("--ox", `0px`);
 		el.style.setProperty("--oy", `0px`);
 	}
-
+ 
 	// open modal for specific slide
 	// function openBookingForSlide(slide) {
 	// 	setBookingForm((prev) => ({

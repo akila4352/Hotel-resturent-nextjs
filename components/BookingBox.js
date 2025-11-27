@@ -1,6 +1,7 @@
 import React from "react"
 import { DateRange } from "react-date-range"
 import { format } from "date-fns"
+import { useRouter } from "next/router"
 
 export default function BookingBox({
   bookingRef,
@@ -17,7 +18,28 @@ export default function BookingBox({
   submitting,
   forceStatic = false, // NEW prop: when true render in document flow (mobile)
 }) {
+  const router = useRouter()
   const formattedDate = (d) => (d ? format(d, "dd LLL yyyy").toUpperCase() : "")
+
+  // navigate to reservation page — do NOT submit/save here to avoid showing alerts.
+  // The reservation page will handle final save/alert after guest details are entered.
+  const onBookNow = () => {
+    if (submitting) return
+    const start = range && range[0] && range[0].startDate
+    const end = range && range[0] && range[0].endDate
+    const checkIn = start ? start.toISOString().slice(0, 10) : ""
+    const checkOut = end ? end.toISOString().slice(0, 10) : ""
+
+    const query = {
+      checkIn,
+      checkOut,
+      adults: String(options?.adult ?? 1),
+      children: String(options?.children ?? 0),
+      rooms: String(options?.room ?? 1),
+    }
+
+    router.push({ pathname: "/reservation", query })
+  }
 
   // compute wrapper position; on mobile/forceStatic we render as static so it pushes content
   const isStatic = !!forceStatic
@@ -197,7 +219,7 @@ export default function BookingBox({
         </div>
 
         <button
-          onClick={handleBookNow}
+          onClick={onBookNow}
           disabled={submitting}
           className="booking-cta"
           style={{
