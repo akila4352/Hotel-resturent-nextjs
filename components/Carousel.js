@@ -112,9 +112,10 @@ export default function Carousel({ items = [] }) {
 		return (
 			<div
 				className="carousel-wrapper"
-				style={{ position: "relative", top: 0, left: 0, width: "100%", height: "min(100vh, 720px)", zIndex: 0 }}
+				suppressHydrationWarning={true}
+				style={{ position: "relative", top: 0, left: 0, width: "100%", height: "100vh", zIndex: 0 }} // changed to full viewport
 			>
-				<div className="slide-item" style={{ position: "relative", width: "100%", height: "min(100vh, 720px)" }}>
+				<div className="slide-item" style={{ position: "relative", width: "100%", height: "100vh" }}> {/* changed to full viewport */}
 					{first.img && (
 						<div
 							style={{
@@ -231,9 +232,10 @@ export default function Carousel({ items = [] }) {
 	return (
 		<div
 			className="carousel-wrapper"
-			style={{ position: "relative", top: 0, left: 0, width: "100%", height: "min(100vh, 720px)", zIndex: 0 }}
+			suppressHydrationWarning={true}
+			style={{ position: "relative", top: 0, left: 0, width: "100%", height: "100vh", zIndex: 0 }} // changed to full viewport
 		>
-			<div id="header-carousel" className="carousel slide" style={{ height: "min(100vh, 720px)", width: "100%" }}>
+			<div id="header-carousel" className="carousel slide" style={{ height: "100vh", width: "100%" }}> {/* changed to full viewport */}
 				<div className="carousel-inner" style={{ height: "100%" }}>
 					<Slider ref={sliderRef} {...sliderSettings}>
 						{slides.map((val, index) => {
@@ -246,7 +248,7 @@ export default function Carousel({ items = [] }) {
 									key={index}
 									onMouseMove={handleMouseMove}
 									onMouseLeave={handleMouseLeave}
-									style={{ position: "relative", width: "100%", height: "min(100vh, 720px)" }}
+									style={{ position: "relative", width: "100%", height: "100vh" }} // changed to full viewport
 								>
 									{/* invisible preloader img */}
 									<img
@@ -280,8 +282,8 @@ export default function Carousel({ items = [] }) {
 											}}
 										/>
 										{/* animated decorative shapes */}
-										<div className="shape shape-1" aria-hidden />
-										<div className="shape shape-2" aria-hidden />
+										<div className="shape shape-1" aria-hidden></div>
+										<div className="shape shape-2" aria-hidden></div>
 									</div>
 
 									{/* overlay caption (animated entrance on slide change) */}
@@ -355,7 +357,7 @@ export default function Carousel({ items = [] }) {
 
  				.carousel-wrapper { overflow: hidden; }
 				/* keep slides responsive and clamp height instead of forcing full viewport */
-				.slide-item { --tx: 0px; --ty: 0px; --ox: 0px; --oy: 0px; height: min(100vh, 720px); position: relative; overflow: hidden; }
+				.slide-item { --tx: 0px; --ty: 0px; --ox: 0px; --oy: 0px; height: 100vh; position: relative; overflow: hidden; } /* use full viewport height; mobile overrides still apply */
 				/* slide background: position and subtle inset shadow */
 				.slide-bg { position: absolute; inset: 0; overflow: hidden; box-shadow: inset 0 28px 40px -24px rgba(0,0,0,0.35); }
 				/* top darkness gradient overlay (above image, below shapes/overlay) */
