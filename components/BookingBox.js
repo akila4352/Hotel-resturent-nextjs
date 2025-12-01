@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { DateRange } from "react-date-range"
 import { format } from "date-fns"
 import { useRouter } from "next/router"
@@ -14,17 +14,153 @@ export default function BookingBox({
   setRange,
   options,
   handleOption,
+  handleRoomType,
   handleBookNow,
   submitting,
-  forceStatic = false, // NEW prop: when true render in document flow (mobile)
+  forceStatic = false,
 }) {
   const router = useRouter()
   const formattedDate = (d) => (d ? format(d, "dd LLL yyyy").toUpperCase() : "")
+
+  // mapping roomType -> iCal URL (replace with your real feeds or put .ics in /public/calendars/)
+  const iCalMap = {
+    single: "/calendars/single.ics", // update when available
+    double: "/calendars/double.ics", // update when available
+    // Triple room iCal (from Booking.com) — provided by user
+    triple: "https://ical.booking.com/v1/export?t=a75aef94-6f98-443a-8b24-f179be163fe5",
+  }
+
+  // blocked dates state (array of Date objects) and a Set of ISO strings for quick lookup
+  const [blockedDates, setBlockedDates] = useState([])
+  const blockedSet = useMemo(() => {
+    const s = new Set()
+    blockedDates.forEach((d) => s.add(d.toISOString().slice(0, 10)))
+    return s
+  }, [blockedDates])
+
+  // parse simple iCal: extract DTSTART/DTEND from VEVENTs (supports YYYYMMDD and YYYYMMDDTHHMMSSZ)
+  const parseICal = async (text) => {
+    const lines = text.split(/\r?\n/)
+    const events = []
+    let inEvent = false
+    let cur = {}
+    for (let raw of lines) {
+      const line = raw.trim()
+      if (!line) continue
+      if (line === "BEGIN:VEVENT") {
+        inEvent = true
+        cur = { status: "CONFIRMED" }
+        continue
+      }
+      if (line === "END:VEVENT") {
+        inEvent = false
+        // ignore cancelled events
+        if (cur.status && String(cur.status).toUpperCase() === "CANCELLED") {
+          cur = {}
+          continue
+        }
+        if (cur.dtstart) events.push({ dtstart: cur.dtstart, dtend: cur.dtend || cur.dtstart, summary: cur.summary || "" })
+        cur = {}
+        continue
+      }
+      if (!inEvent) continue
+
+      // capture DTSTART/DTEND/STATUS/SUMMARY lines robustly (handle params like DTSTART;VALUE=DATE:...)
+      if (line.toUpperCase().startsWith("DTSTART")) {
+        const idx = line.indexOf(":")
+        if (idx !== -1) cur.dtstart = line.slice(idx + 1)
+        continue
+      }
+      if (line.toUpperCase().startsWith("DTEND")) {
+        const idx = line.indexOf(":")
+        if (idx !== -1) cur.dtend = line.slice(idx + 1)
+        continue
+      }
+      if (line.toUpperCase().startsWith("STATUS")) {
+        const idx = line.indexOf(":")
+        if (idx !== -1) cur.status = line.slice(idx + 1)
+        continue
+      }
+      if (line.toUpperCase().startsWith("SUMMARY")) {
+        const idx = line.indexOf(":")
+        if (idx !== -1) cur.summary = line.slice(idx + 1)
+        continue
+      }
+    }
+
+    // expand events to array of date objects (inclusive of start, exclusive of dtend per iCal; subtract one day)
+    const out = []
+    const toDate = (val) => {
+      if (!val) return null
+      // YYYYMMDD or YYYYMMDDTHHMMSSZ
+      const m = val.match(/^(\d{4})(\d{2})(\d{2})/)
+      if (m) {
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+      }
+      const dd = new Date(val)
+      return isNaN(dd.getTime()) ? null : dd
+    }
+
+    const addDays = (d, n) => {
+      const x = new Date(d)
+      x.setDate(x.getDate() + n)
+      return x
+    }
+
+    for (const ev of events) {
+      // Treat any VEVENT (including ones whose SUMMARY contains "Closed" or similar) as blocked
+      const s = toDate(ev.dtstart)
+      let e = toDate(ev.dtend)
+      if (!s) continue
+      if (e) e = addDays(e, -1) // iCal DTEND is exclusive
+      else e = s
+      for (let d = new Date(s); d <= e; d = addDays(d, 1)) {
+        out.push(new Date(d))
+      }
+    }
+    return out
+  }
+
+  // fetch iCal when roomType changes — use local API proxy to avoid CORS
+  useEffect(() => {
+    const type = (options?.roomType || "").toLowerCase()
+    if (!type) {
+      setBlockedDates([])
+      return
+    }
+    const url = iCalMap[type]
+    if (!url) {
+      setBlockedDates([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        // call our server-side proxy to avoid CORS issues
+        const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(url)}`
+        const res = await fetch(proxyUrl)
+        if (!res.ok) throw new Error("Failed to fetch iCal via proxy")
+        const text = await res.text()
+        if (cancelled) return
+        const parsed = await parseICal(text)
+        if (!cancelled) setBlockedDates(parsed)
+      } catch (err) {
+        console.error("iCal fetch/parse error:", err)
+        if (!cancelled) setBlockedDates([])
+      }
+    })()
+    return () => { cancelled = true }
+  }, [options?.roomType])
 
   // navigate to reservation page — do NOT submit/save here to avoid showing alerts.
   // The reservation page will handle final save/alert after guest details are entered.
   const onBookNow = () => {
     if (submitting) return
+    // require room type selection
+    if (!options?.roomType) {
+      alert("Please select a room type before booking.")
+      return
+    }
     const start = range && range[0] && range[0].startDate
     const end = range && range[0] && range[0].endDate
     const checkIn = start ? start.toISOString().slice(0, 10) : ""
@@ -36,6 +172,7 @@ export default function BookingBox({
       adults: String(options?.adult ?? 1),
       children: String(options?.children ?? 0),
       rooms: String(options?.room ?? 1),
+      roomType: String(options?.roomType ?? ""),
     }
 
     router.push({ pathname: "/reservation", query })
@@ -71,8 +208,10 @@ export default function BookingBox({
         style={{
           // keep inner visual style; on static mode make it full-width inside wrapper
           display: "flex",
-          gap: 10,
+          gap: 6,
           alignItems: "center",
+          flexWrap: "nowrap",            // keep everything on one line
+          overflowX: "hidden",           // prevent horizontal scrollbar; shrink controls instead
           padding: isStatic ? "14px" : "12px 14px",
           background: isStatic ? "#ffffff" : "rgba(255,255,255,0.60)", // solid white on responsive/static
           borderRadius: 12,
@@ -82,7 +221,7 @@ export default function BookingBox({
         }}
       >
         {/* Single date pill: shows check-in / check-out stacked (simpler for users) */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap" }}>
           <button
             type="button"
             className="booking-date"
@@ -91,11 +230,11 @@ export default function BookingBox({
               background: "white",
               color: "#000",
               border: "1px solid rgba(11,18,32,0.06)",
-              padding: "10px 12px",
+              padding: "8px 10px",
               borderRadius: 8,
-              minWidth: 180,
+              minWidth: 120,            // reduced to fit on one line
               fontWeight: 800,
-              fontSize: 14,
+              fontSize: 13,             // slightly smaller
               display: "flex",
               alignItems: "center",
               gap: 10,
@@ -118,10 +257,34 @@ export default function BookingBox({
           </button>
         </div>
 
+        {/* Room type select placed to the right of date pill and left of Adult control */}
+        <div style={{ minWidth: 100, display: "flex", alignItems: "center", marginLeft: 6 }}>
+          <select
+            name="roomType"
+            value={options.roomType || ""}
+            onChange={(e) => handleRoomType && handleRoomType(e.target.value)}
+            aria-label="Select room type"
+            style={{
+              padding: "6px 8px",
+              borderRadius: 8,
+              border: "1px solid rgba(11,18,32,0.06)",
+              background: "white",
+              fontWeight: 700,
+              minWidth: 100,
+            }}
+            required
+          >
+            <option value="">Room Type</option>
+            <option value="single">Single</option>
+            <option value="double">Double</option>
+            <option value="triple">Triple</option>
+          </select>
+        </div>
+
         {/* controls: each group uses a translucent white card */}
-        <div className="booking-controls" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="booking-controls" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", overflowX: "hidden" }}>
           {/* Adult group: single .group (same structure as other controls) */}
-          <div className="group" style={{ display: "flex", alignItems: "center", gap: 6, background: "white", padding: "8px 10px", borderRadius: 8 }}>
+          <div className="group" style={{ display: "flex", alignItems: "center", gap: 6, background: "white", padding: "6px 8px", borderRadius: 8, minWidth: 90 }}>
             <span style={{ display: "inline-flex", alignItems: "center", color: "#000" }} aria-hidden>
               {/* person icon */}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -129,12 +292,12 @@ export default function BookingBox({
                 <path d="M4 22C4 17.5817 7.58172 14 12 14C16.4183 14 20 17.5817 20 22" fill="currentColor" opacity="0.9"/>
               </svg>
             </span>
-            <label style={{ fontSize: 12, color: "#000", fontWeight: 700 }}>Adult</label>
+            <label style={{ fontSize: 11, color: "#000", fontWeight: 700 }}>Adult</label>
 
             {/* decrement */}
             <button
               onClick={() => handleOption("adult", "d")}
-              style={{ padding: 8, borderRadius: 8, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+              style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
               aria-label="Decrease adults"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -142,12 +305,12 @@ export default function BookingBox({
               </svg>
             </button>
 
-            <span style={{ minWidth: 20, textAlign: "center", color: "#000" }}>{options.adult}</span>
+            <span style={{ minWidth: 18, textAlign: "center", color: "#000", fontSize: 13 }}>{options.adult}</span>
 
             {/* increment */}
             <button
               onClick={() => handleOption("adult", "i")}
-              style={{ padding: 8, borderRadius: 8, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+              style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
               aria-label="Increase adults"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -163,8 +326,9 @@ export default function BookingBox({
             alignItems: "center",
             gap: 6,
             background: "white",
-            padding: "8px 10px",
-            borderRadius: 8
+            padding: "6px 8px",
+            borderRadius: 8,
+            minWidth: 90
           }}>
             <span style={{ display: "inline-flex", alignItems: "center", color: "#000" }} aria-hidden>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -172,14 +336,14 @@ export default function BookingBox({
                 <path d="M4 20C4 16 7.58172 14 12 14C16.4183 14 20 16 20 20" fill="currentColor" opacity="0.9"/>
               </svg>
             </span>
-            <label style={{ fontSize: 12, color: "#000", fontWeight: 700 }}>Children</label>
-            <button onClick={() => handleOption("children", "d")} style={{ padding: 8, borderRadius: 8, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Decrease children">
+            <label style={{ fontSize: 11, color: "#000", fontWeight: 700 }}>Children</label>
+            <button onClick={() => handleOption("children", "d")} style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Decrease children">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
               </svg>
             </button>
-            <span style={{ minWidth: 20, textAlign: "center", color: "#000" }}>{options.children}</span>
-            <button onClick={() => handleOption("children", "i")} style={{ padding: 8, borderRadius: 8, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Increase children">
+            <span style={{ minWidth: 18, textAlign: "center", color: "#000", fontSize: 13 }}>{options.children}</span>
+            <button onClick={() => handleOption("children", "i")} style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Increase children">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="11" y="4" width="2" height="16" rx="1" fill="currentColor"/>
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
@@ -193,8 +357,9 @@ export default function BookingBox({
             alignItems: "center",
             gap: 6,
             background: "white",
-            padding: "8px 10px",
-            borderRadius: 8
+            padding: "6px 8px",
+            borderRadius: 8,
+            minWidth: 90
           }}>
             <span style={{ display: "inline-flex", alignItems: "center", color: "#000" }} aria-hidden>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -202,14 +367,14 @@ export default function BookingBox({
                 <path d="M7 6C7 4.34315 8.34315 3 10 3H14C15.6569 3 17 4.34315 17 6V9H7V6Z" fill="currentColor" opacity="0.95"/>
               </svg>
             </span>
-            <label style={{ fontSize: 12, color: "#000", fontWeight: 700 }}>Room</label>
-            <button onClick={() => handleOption("room", "d")} style={{ padding: 8, borderRadius: 8, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Decrease rooms">
+            <label style={{ fontSize: 11, color: "#000", fontWeight: 700 }}>Room</label>
+            <button onClick={() => handleOption("room", "d")} style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Decrease rooms">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
               </svg>
             </button>
-            <span style={{ minWidth: 20, textAlign: "center", color: "#000" }}>{options.room}</span>
-            <button onClick={() => handleOption("room", "i")} style={{ padding: 8, borderRadius: 8, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Increase rooms">
+            <span style={{ minWidth: 18, textAlign: "center", color: "#000", fontSize: 13 }}>{options.room}</span>
+            <button onClick={() => handleOption("room", "i")} style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Increase rooms">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="11" y="4" width="2" height="16" rx="1" fill="currentColor"/>
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
@@ -226,8 +391,8 @@ export default function BookingBox({
             background: "linear-gradient(90deg,#ff7a59,#ffbf69)",
             color: "#000",
             border: "none",
-            padding: "12px 18px",
-            borderRadius: 10,
+            padding: "8px 12px",
+            borderRadius: 8,
             fontWeight: 700,
             opacity: submitting ? 0.8 : 1,
             cursor: submitting ? "wait" : "pointer",
@@ -272,12 +437,42 @@ export default function BookingBox({
               onChange={(item) => setRange([item.selection])}
               moveRangeOnFirstSelection={false}
               minDate={new Date()}
-              // NEW: show a single vertical month on mobile/static to avoid large popups
+              // disable blocked dates so user cannot pick them
+              disabledDates={blockedDates}
+              // show 1 month on mobile/static, otherwise 2
               months={isStatic ? 1 : 2}
               direction={isStatic ? "vertical" : "horizontal"}
               showSelectionPreview={true}
               editableDateInputs={true}
               showMonthAndYearPickers={true}
+              // custom day rendering: red background for blocked, blue small marker for available
+              dayContentRenderer={(date) => {
+                const iso = date.toISOString().slice(0, 10)
+                const isBlocked = blockedSet.has(iso)
+                const dayNumber = date.getDate()
+                const style = {
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 36,
+                  borderRadius: 6,
+                  fontSize: 13,
+                }
+                if (isBlocked) {
+                  return (
+                    <div style={{ ...style, background: "rgba(220,38,38,0.12)", color: "#b91c1c", fontWeight: 700 }}>
+                      {dayNumber}
+                    </div>
+                  )
+                }
+                // available days — subtle blue marker (avoid interfering with selection styling)
+                return (
+                  <div style={{ ...style, color: "#0ea5e9", fontWeight: 700 }}>
+                    {dayNumber}
+                  </div>
+                )
+              }}
               rangeColors={["#3b82f6"]}
             />
           </div>

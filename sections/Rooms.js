@@ -18,6 +18,17 @@ export const rooms = roomdata.slice(0, 6).map((r, i) => ({
   maxAdults: Number.isFinite(r.maxAdults) ? r.maxAdults : (r.maxAdults === 0 ? 0 : (r.maxAdults ?? 2)),
   maxChildren: Number.isFinite(r.maxChildren) ? r.maxChildren : (r.maxChildren === 0 ? 0 : (r.maxChildren ?? 1)),
   oneAdultRequiresChild: !!r.oneAdultRequiresChild,
+  // type for filtering: prefer explicit r.type, otherwise infer from title (Single/Double/Triple), fallback to "double"
+  type: (() => {
+    if (r.type) return String(r.type).toLowerCase()
+    const title = String(r.title || "").toLowerCase()
+    if (title.includes("triple")) return "triple"
+    if (title.includes("single")) return "single"
+    if (title.includes("double")) return "double"
+    // fallback: use metaType or default to double
+    if (r.metaType) return String(r.metaType).toLowerCase()
+    return "double"
+  })(),
 }))
 
 const Rooms = () => {

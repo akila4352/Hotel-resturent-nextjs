@@ -7,12 +7,15 @@ import { rooms as roomOptions } from "@/sections/Rooms" // <-- use shared rooms
 
 export default function ReservationPage() {
   const router = useRouter()
-  const { checkIn, checkOut, adults = "1", children = "0", rooms = "1" } = router.query
+  const { checkIn, checkOut, adults = "1", children = "0", rooms = "1", roomType: qRoomType } = router.query
+
+  // compute a normalized roomType from query (lowercase)
+  const queryRoomType = qRoomType ? String(qRoomType).toLowerCase() : ""
 
   // parse dates safely
   const [ci, setCi] = useState(null)
   const [co, setCo] = useState(null)
-  useEffect(() => {
+  useEffect(() => { 
     try {
       if (checkIn) setCi(parseISO(String(checkIn)))
       if (checkOut) setCo(parseISO(String(checkOut)))
@@ -42,8 +45,21 @@ export default function ReservationPage() {
     }
     return []
   })
-   const [submitting, setSubmitting] = useState(false)
-   const [saved, setSaved] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  // form state used in Guest Details — initialize to avoid ReferenceError
+  const [form, setForm] = useState({
+    country: "",
+    mobile: "",
+    firstName: "",
+    lastName: "",
+    address: "",
+    city: "",
+    email: "",
+    notes: "",
+    agree: false,
+  })
 
   // helpers to manage selectedRooms
   const isRoomSelected = (r) => selectedRooms.some((sr) => String(sr.room.id) === String(r.id))
@@ -79,9 +95,11 @@ export default function ReservationPage() {
     return { ok: true, reason: "" }
   }
 
-  // if query.room present, try to pre-select that room; otherwise keep default
+  // if query.room or query.roomType present, try to pre-select that room; otherwise keep default
   useEffect(() => {
     const qRoom = router.query?.room
+    const qType = router.query?.roomType ? String(router.query.roomType).toLowerCase() : null
+
     if (qRoom) {
       const found = roomOptions.find((rr) => String(rr.id) === String(qRoom))
       if (found) {
@@ -89,8 +107,23 @@ export default function ReservationPage() {
         return
       }
     }
+
+    // if roomType provided, try to select the first room matching that type
+    if (qType) {
+      const foundByType = roomOptions.find((rr) => String(rr.type).toLowerCase() === qType)
+      if (foundByType) {
+        setSelectedRoom(foundByType)
+        // set selectedRooms to include that room as default
+        setSelectedRooms([{ room: foundByType, qty: 1 }])
+        return
+      }
+    }
+
     setSelectedRoom((prev) => prev || roomOptions[0] || null)
-  }, [])
+  }, [router.query?.room, router.query?.roomType]) // re-run when query changes
+
+  // only show rooms matching the selected query roomType (if provided)
+  const visibleRooms = (queryRoomType ? roomOptions.filter((r) => String(r.type).toLowerCase() === queryRoomType) : roomOptions)
 
   // numeric guest counts used in several places
   const numAdults = Number(adults || 0)
@@ -115,7 +148,21 @@ export default function ReservationPage() {
       return
     }
     setStep(2)
-    // scroll to top so form is visible on small screens
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  // Central continue handler from the summary/total area (single Continue button)
+  const continueFromSummary = () => {
+    if (selectedRooms.length === 0 && !selectedRoom) {
+      alert("Please select a room before continuing.")
+      return
+    }
+    const suitability = multiSuitability()
+    if (!suitability.ok) {
+      alert(suitability.reason + ". Please add more rooms.")
+      return
+    }
+    setStep(2)
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -320,8 +367,23 @@ export default function ReservationPage() {
               <div className="row"><div>Space Price</div><div>{selectedRooms.length ? `${selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$` : (selectedRoom ? `${(selectedRoom.price).toFixed(2)}$` : "-")}</div></div>
               <div className="row"><div>Tax</div><div>FREE</div></div>
             </div>
+
+          </div> {/* <-- ensure selected-room is closed BEFORE Continue button */}
+
+          {/* single Continue button under the totals */}
+          <div style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              onClick={continueFromSummary}
+              className="btn continue aside-continue"
+              disabled={!multiSuitability().ok}
+              title={!multiSuitability().ok ? multiSuitability().reason : "Continue to Guest Details"}
+            >
+              Continue
+            </button>
           </div>
-        </div>
+
+        </div> {/* <-- close full-details */}
 
         {/* compact total preview always visible on mobile; click to toggle details */}
         <div
@@ -340,6 +402,18 @@ export default function ReservationPage() {
               ? `${(selectedRoom.price * Math.max(1, nights)).toFixed(2)}$`
               : "-"}
           </div>
+
+          {/* small Continue button in compact preview for mobile */}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); continueFromSummary(); }}
+            className="btn small continue preview-continue"
+            disabled={!multiSuitability().ok}
+            title={!multiSuitability().ok ? multiSuitability().reason : "Continue"}
+          >
+            Continue
+          </button>
+          
           <div className={`chev ${showSummary ? "open" : ""}`}>▾</div>
         </div>
       </aside>
@@ -365,54 +439,53 @@ export default function ReservationPage() {
               <section>
                 <h2 className="section-title">Choose a room</h2>
                 <div className="room-grid" role="list">
-                  {roomOptions.map((r) => {
-                    // if we add this room (or it's already added) what is combined capacity?
-                    const already = selectedRooms.find((sr) => String(sr.room.id) === String(r.id))
-                    const tempList = already ? selectedRooms : [...selectedRooms, { room: r, qty: 1 }]
-                    const suitability = multiSuitability(tempList)
-                    return (
-                      <div key={r.id} className={`room-card ${already ? "selected" : ""}`} role="listitem">
-                        <div className="room-img" style={{ backgroundImage: `url(${r.img})` }} />
-                        <div className="room-row">
-                          <div>
-                            <div className="room-name">{r.title}</div>
-                            <div className="room-rate">{r.price}$ / night</div>
-                            {/* occupancy / AC details */}
-                            <div className="room-meta" style={{ marginTop: 6, color: "#555", fontSize: 13, fontWeight: 600 }}>
-                              {formatRoomMeta(r)}
+                  {visibleRooms.length === 0 ? (
+                    <div style={{ padding: 20, width: "100%", textAlign: "center", color: "#666" }}>
+                      No rooms match the selected room type. Please choose a different type.
+                    </div>
+                  ) : (
+                    visibleRooms.map((r) => {
+                      // if we add this room (or it's already added) what is combined capacity?
+                      const already = selectedRooms.find((sr) => String(sr.room.id) === String(r.id))
+                      const tempList = already ? selectedRooms : [...selectedRooms, { room: r, qty: 1 }]
+                      const suitability = multiSuitability(tempList)
+                      return (
+                        <div key={r.id} className={`room-card ${already ? "selected" : ""}`} role="listitem">
+                          <div className="room-img" style={{ backgroundImage: `url(${r.img})` }} />
+                          <div className="room-row">
+                            <div>
+                              <div className="room-name">{r.title}</div>
+                              <div className="room-rate">{r.price}$ / night</div>
+                              {/* occupancy / AC details */}
+                              <div className="room-meta" style={{ marginTop: 6, color: "#555", fontSize: 13, fontWeight: 600 }}>
+                                {formatRoomMeta(r)}
+                              </div>
+                              {/* quick hint when adding this room would still be insufficient */}
+                              {!suitability.ok && (
+                                <div style={{ marginTop: 6, color: "#b91c1c", fontSize: 13 }}>
+                                  {suitability.reason}
+                                </div>
+                              )}
                             </div>
-                            {/* quick hint when adding this room would still be insufficient */}
-                            {!suitability.ok && (
-                              <div style={{ marginTop: 6, color: "#b91c1c", fontSize: 13 }}>
-                                {suitability.reason}
-                              </div>
-                            )}
-                          </div>
-                          <div className="room-actions">
-                            {/* toggle add/remove */}
-                            {!already ? (
-                              <button onClick={() => addRoom(r)} className="btn small muted">Add</button>
-                            ) : (
-                              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                <button onClick={() => setRoomQty(r.id, Math.max(1, already.qty - 1))} className="btn small muted">-</button>
-                                <div style={{ minWidth: 28, textAlign: "center", fontWeight: 800 }}>{already.qty}</div>
-                                <button onClick={() => setRoomQty(r.id, already.qty + 1)} className="btn small muted">+</button>
-                                <button onClick={() => removeRoom(r)} className="btn small">Remove</button>
-                              </div>
-                            )}
-                            <button
-                              onClick={() => onSelectRoom(r)}
-                              className="btn continue"
-                              disabled={!suitability.ok}
-                              title={!suitability.ok ? suitability.reason : `Continue with ${r.title}`}
-                            >
-                              Continue
-                            </button>
+                            <div className="room-actions">
+                              {/* toggle add/remove */}
+                              {!already ? (
+                                <button onClick={() => addRoom(r)} className="btn small muted">Add</button>
+                              ) : (
+                                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                  <button onClick={() => setRoomQty(r.id, Math.max(1, already.qty - 1))} className="btn small muted">-</button>
+                                  <div style={{ minWidth: 28, textAlign: "center", fontWeight: 800 }}>{already.qty}</div>
+                                  <button onClick={() => setRoomQty(r.id, already.qty + 1)} className="btn small muted">+</button>
+                                  <button onClick={() => removeRoom(r)} className="btn small">Remove</button>
+                                </div>
+                              )}
+                              {/* per-card Continue removed — single Continue is now in the summary */}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })
+                  )}
                 </div>
               </section>
             )}
@@ -599,6 +672,10 @@ export default function ReservationPage() {
           /* keep preview visible */
           .aside .total-preview{ display:flex; }
         }
+
+        /* aside continue button style */
+        .aside-continue{ width:100%; margin-top:8px; background:#ff7a59; color:#000; border:none; padding:10px 12px; border-radius:8px; font-weight:700; }
+        .preview-continue{ margin-left:8px; background:#ff7a59; color:#000; border:none; padding:6px 8px; border-radius:8px; font-weight:700; }
       `}</style>
     </div>
   )

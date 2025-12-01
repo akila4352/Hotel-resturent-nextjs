@@ -18,7 +18,7 @@ import BookingBox from "@/components/BookingBox"
 
 const Hero = () => {
   const router = useRouter()
-
+ 
   // Booking state (restored to match booking UI)
   // const [destination, setDestination] = useState("")
   const [openDate, setOpenDate] = useState(false)
@@ -27,7 +27,7 @@ const Hero = () => {
   ])
   const bookingRef = useRef(null)       // booking box element
   const calendarRef = useRef(null)
-  const [options, setOptions] = useState({ adult: 1, children: 0, room: 1 })
+  const [options, setOptions] = useState({ adult: 1, children: 0, room: 1, roomType: "" }) // include roomType
   const [submitting, setSubmitting] = useState(false)
 
   // --- NEW: refs + state for sticky/stop behavior ---
@@ -63,6 +63,11 @@ const Hero = () => {
       ...prev,
       [name]: op === "i" ? prev[name] + 1 : Math.max(name === "children" ? 0 : 1, prev[name] - 1),
     }))
+
+  // handler to set the selected room type
+  const handleRoomType = (type) => {
+    setOptions((prev) => ({ ...prev, roomType: type }))
+  }
 
   const handleBookNow = async () => {
     if (submitting) return
@@ -168,6 +173,7 @@ const Hero = () => {
                  setRange={setRange}
                  options={options}
                  handleOption={handleOption}
+                 handleRoomType={handleRoomType} // pass new handler
                  handleBookNow={handleBookNow}
                  submitting={submitting}
                  forceStatic={true} // force static flow on mobile
@@ -211,6 +217,7 @@ const Hero = () => {
           setRange={setRange}
           options={options}
           handleOption={handleOption}
+          handleRoomType={handleRoomType}
           handleBookNow={handleBookNow}
           submitting={submitting}
         />
