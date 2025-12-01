@@ -71,7 +71,7 @@ export default function Carousel({ items = [] }) {
 	const previous = () => {
 		if (sliderRef.current && sliderRef.current.slickPrev) sliderRef.current.slickPrev();
 	};
-
+ 
 	// settings include callbacks to manage caption animations
 	const settings = {
 		dots: false,
@@ -356,15 +356,30 @@ export default function Carousel({ items = [] }) {
  				.carousel-wrapper { overflow: hidden; }
 				/* keep slides responsive and clamp height instead of forcing full viewport */
 				.slide-item { --tx: 0px; --ty: 0px; --ox: 0px; --oy: 0px; height: min(100vh, 720px); position: relative; overflow: hidden; }
-				.slide-bg { position: absolute; inset: 0; overflow: hidden; }
-				.slide-bg img { will-change: transform; }
+				/* slide background: position and subtle inset shadow */
+				.slide-bg { position: absolute; inset: 0; overflow: hidden; box-shadow: inset 0 28px 40px -24px rgba(0,0,0,0.35); }
+				/* top darkness gradient overlay (above image, below shapes/overlay) */
+				.slide-bg::before {
+					content: "";
+					position: absolute;
+					top: 0;
+					left: 0;
+					right: 0;
+					height: 14%; /* adjust % to control vertical extent of the shade */
+					background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 100%);
+					pointer-events: none;
+					z-index: 3;
+				}
+				.slide-bg img { will-change: transform; z-index: 1; }
+				/* ensure decorative shapes sit above the gradient but below captions */
+				.shape { position: absolute; border-radius: 50%; opacity: 0.12; filter: blur(6px); pointer-events: none; z-index: 4; }
  
 				/* decorative floating shapes */
-				.shape { position: absolute; border-radius: 50%; opacity: 0.12; filter: blur(6px); pointer-events: none; }
-				.shape-1 { width: 220px; height: 220px; background: radial-gradient(circle at 30% 30%, #ff7a59, transparent 40%); left: -60px; top: 10%; animation: floatSlow 8s ease-in-out infinite; transform: translateZ(0); }
-				.shape-2 { width: 160px; height: 160px; background: radial-gradient(circle at 60% 60%, #2fb0ff, transparent 40%); right: -50px; bottom: 12%; animation: floatSlow 10s ease-in-out infinite reverse; transform: translateZ(0); }
-				@keyframes floatSlow { 0% { transform: translateY(0); } 50% { transform: translateY(18px); } 100% { transform: translateY(0); } }
-
+-				.shape { position: absolute; border-radius: 50%; opacity: 0.12; filter: blur(6px); pointer-events: none; }
+ 				.shape-1 { width: 220px; height: 220px; background: radial-gradient(circle at 30% 30%, #ff7a59, transparent 40%); left: -60px; top: 10%; animation: floatSlow 8s ease-in-out infinite; transform: translateZ(0); }
+ 				.shape-2 { width: 160px; height: 160px; background: radial-gradient(circle at 60% 60%, #2fb0ff, transparent 40%); right: -50px; bottom: 12%; animation: floatSlow 10s ease-in-out infinite reverse; transform: translateZ(0); }
+ 				@keyframes floatSlow { 0% { transform: translateY(0); } 50% { transform: translateY(18px); } 100% { transform: translateY(0); } }
+ 
 				/* overlay caption */
 				/* center overlay, constrain width and add horizontal padding so text always wraps */
 				.hero-overlay {
@@ -416,7 +431,7 @@ export default function Carousel({ items = [] }) {
 					transition: transform 700ms 80ms, opacity 700ms 80ms;
 				}
 				.hero-overlay.visible .hero-sub { opacity: 1; transform: translateY(0); }
-
+ 
 				/* optional small script / brand above the title */
 				.hero-brand {
 					font-family: "Great Vibes", cursive;
@@ -427,13 +442,13 @@ export default function Carousel({ items = [] }) {
 					letter-spacing: 0.6px;
 					text-shadow: 0 6px 18px rgba(0,0,0,0.45);
 				}
-
+ 
 				.hero-cta { display: inline-flex; gap: 12px; margin-top: 12px; opacity: 0; transform: translateY(6px); transition: opacity 800ms 160ms, transform 800ms 160ms; }
 				.hero-overlay.visible .hero-cta { opacity: 1; transform: translateY(0); }
-
+ 
 				.btn-primary { background: linear-gradient(90deg,#ff7a59,#ffbf69); color: #0b1220; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; pointer-events: auto; }
 				.btn-ghost { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.08); padding: 10px 14px; border-radius: 8px; cursor: pointer; pointer-events: auto; }
-
+ 
 				/* responsive */
 				@media (max-width: 900px) {
 					/* larger responsive title/subtitle */
@@ -455,7 +470,7 @@ export default function Carousel({ items = [] }) {
 					/* shift overlay left so user sees text immediately on smaller viewports */
 					.hero-overlay { top: 42%; left: 8%; transform: translate(0, -50%); text-align: left; width: 78%; padding: 0 8px; }
 				}
-
+ 
 				@media (max-width: 760px) {
 					/* slightly larger mobile sizes to improve legibility */
 					.carousel-wrapper,
@@ -467,12 +482,14 @@ export default function Carousel({ items = [] }) {
 						height: 120%;
 						transform: translate(-50%, -50%) translate(var(--tx, 0), var(--ty, 0)) scale(1.06);
 					}
++					/* reduce gradient extent on small screens so it doesn't cover too much */
++					.slide-bg::before { height: 10%; background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0) 100%); }
 					/* keep overlay left-aligned and readable on compact heights */
 					.hero-overlay { top: 40%; left: 6%; transform: translate(0, -50%); text-align: left; width: 84%; padding: 0 10px; z-index: 9; }
 					.hero-title { font-size: clamp(22px, 7.2vw, 36px); }
 					.hero-sub { font-size: 16px; }
 				}
-
+ 
 				@media (max-width: 480px) {
 					/* compact phones — keep text larger for readability */
 					.carousel-wrapper,
@@ -480,7 +497,7 @@ export default function Carousel({ items = [] }) {
 						height: 280px !important;
 					}
 					.shape-1, .shape-2 { display: none; }
-
+ 
 					.hero-overlay {
 						top: 44%;
 						left: 6%;
@@ -503,7 +520,7 @@ export default function Carousel({ items = [] }) {
 						font-family: "Dancing Script", "Lora", serif;
 					}
 					.hero-brand { font-size: clamp(12px, 3.6vw, 20px); }
-
+ 
 					/* ensure prev/next controls sit inside the hero and remain tappable */
 					button[aria-label="Previous slide"],
 					button[aria-label="Next slide"] {
