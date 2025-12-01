@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     if (!["http:", "https:"].includes(parsed.protocol)) {
       res.status(400).send("Invalid protocol")
       return
-    }
+    } // Optionally restrict to certain hosts/domains:
 
     // Use the built-in fetch provided by the Node runtime (Node 18+ / Next.js)
     // Add common headers to improve chances of a successful Booking.com response.
