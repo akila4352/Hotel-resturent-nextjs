@@ -225,16 +225,12 @@ export const roomdata = [
     id: 1,
     title: "Triple Room AC",
     cover: "../images/bed1.jpg",
-    post: "AC · King Bed",
+    post: "AC · King Bed", // removed "· Sea View"
     ac: true,
     minAdults: 2,
     maxAdults: 4,
     maxChildren: 2,
     oneAdultRequiresChild: false,
-    adultPrice: 50.0,
-    childPrice: 25.0,
-    wifi: true,
-    hotWater: true,
   },
   {
     id: 2,
@@ -246,10 +242,6 @@ export const roomdata = [
     maxAdults: 2,
     maxChildren: 1,
     oneAdultRequiresChild: true,
-    adultPrice: 35.0,
-    childPrice: 15.0,
-    wifi: true,
-    hotWater: true,
   },
   {
     id: 3,
@@ -261,10 +253,6 @@ export const roomdata = [
     maxAdults: 2,
     maxChildren: 1,
     oneAdultRequiresChild: true,
-    adultPrice: 35.0,
-    childPrice: 15.0,
-    wifi: true,
-    hotWater: true,
   },
   {
     id: 4,
@@ -276,10 +264,6 @@ export const roomdata = [
     maxAdults: 2,
     maxChildren: 1,
     oneAdultRequiresChild: true,
-    adultPrice: 30.0,
-    childPrice: 12.0,
-    wifi: true,
-    hotWater: true,
   },
   {
     id: 5,
@@ -291,10 +275,6 @@ export const roomdata = [
     maxAdults: 2,
     maxChildren: 1,
     oneAdultRequiresChild: true,
-    adultPrice: 38.0,
-    childPrice: 16.0,
-    wifi: true,
-    hotWater: true,
   },
   {
     id: 6,
@@ -306,10 +286,6 @@ export const roomdata = [
     maxAdults: 1,
     maxChildren: 1,
     oneAdultRequiresChild: true,
-    adultPrice: 20.0,
-    childPrice: 10.0,
-    wifi: true,
-    hotWater: true,
   },
 ]
 export const facility = [
