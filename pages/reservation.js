@@ -3,6 +3,7 @@ import { useRouter } from "next/router"
 import { parseISO, format, differenceInDays } from "date-fns"
 import { rtdb } from "../lib/firebase"
 import { ref as dbRef, push } from "firebase/database"
+import { rooms as roomOptions } from "@/sections/Rooms" // <-- use shared rooms
 
 export default function ReservationPage() {
   const router = useRouter()
@@ -24,42 +25,95 @@ export default function ReservationPage() {
     if (ci && co) return Math.max(1, differenceInDays(co, ci))
     return 0
   }, [ci, co])
-
+ 
   const totalGuests = Number(adults || 0) + Number(children || 0)
-
-  // simple rooms list for step 1 (replace/add your real rooms)
-  const roomOptions = [
-    { id: "family", title: "Family Room", price: 24.99, img: "/images/b4.jpeg" },
-    { id: "deluxe", title: "Deluxe Room", price: 34.99, img: "/images/b5.jpg" },
-    { id: "suite", title: "Suite", price: 54.99, img: "/images/b6.jpg" },
-  ]
 
   // UI state
   const [step, setStep] = useState(1) // 1 = choose room, 2 = guest details
+  // single selectedRoom kept for compatibility with some UI, but main selection is selectedRooms
   const [selectedRoom, setSelectedRoom] = useState(roomOptions[0] || null)
-  const [submitting, setSubmitting] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  // guest form
-  const [form, setForm] = useState({
-    country: "",
-    mobile: "",
-    firstName: "",
-    lastName: "",
-    address: "",
-    city: "",
-    email: "",
-    notes: "",
-    agree: false,
+  // support multiple room selections: { room, qty }
+  const [selectedRooms, setSelectedRooms] = useState(() => {
+    // preselect from query.room if present
+    const qRoom = router.query?.room
+    if (qRoom) {
+      const found = roomOptions.find((rr) => String(rr.id) === String(qRoom))
+      return found ? [{ room: found, qty: 1 }] : []
+    }
+    return []
   })
+   const [submitting, setSubmitting] = useState(false)
+   const [saved, setSaved] = useState(false)
 
+  // helpers to manage selectedRooms
+  const isRoomSelected = (r) => selectedRooms.some((sr) => String(sr.room.id) === String(r.id))
+  const setRoomQty = (roomId, qty) => {
+    setSelectedRooms((prev) =>
+      prev
+        .map((sr) => (String(sr.room.id) === String(roomId) ? { ...sr, qty: Math.max(1, qty) } : sr))
+        .filter(Boolean)
+    )
+  }
+  const addRoom = (r) => {
+    setSelectedRooms((prev) => {
+      const found = prev.find((sr) => String(sr.room.id) === String(r.id))
+      if (found) return prev
+      return [...prev, { room: r, qty: 1 }]
+    })
+    setSelectedRoom(r)
+  }
+  const removeRoom = (r) => {
+    setSelectedRooms((prev) => prev.filter((sr) => String(sr.room.id) !== String(r.id)))
+  }
+  
+  // combined capacity checks (only enforce maximum capacities)
+  const combinedCapacity = (roomsList = selectedRooms) => {
+    const totalAdultCap = roomsList.reduce((s, sr) => s + ((sr.room.maxAdults ?? 2) * sr.qty), 0)
+    const totalChildCap = roomsList.reduce((s, sr) => s + ((sr.room.maxChildren ?? 1) * sr.qty), 0)
+    return { totalAdultCap, totalChildCap }
+  }
+  const multiSuitability = (roomsList = selectedRooms) => {
+    const { totalAdultCap, totalChildCap } = combinedCapacity(roomsList)
+    if (Number(adults || 0) > totalAdultCap) return { ok: false, reason: `Selected rooms capacity only ${totalAdultCap} adults` }
+    if (Number(children || 0) > totalChildCap) return { ok: false, reason: `Selected rooms capacity only ${totalChildCap} children` }
+    return { ok: true, reason: "" }
+  }
+
+  // if query.room present, try to pre-select that room; otherwise keep default
   useEffect(() => {
-    // if you want default room from query, you can read router.query.room here
+    const qRoom = router.query?.room
+    if (qRoom) {
+      const found = roomOptions.find((rr) => String(rr.id) === String(qRoom))
+      if (found) {
+        setSelectedRoom(found)
+        return
+      }
+    }
     setSelectedRoom((prev) => prev || roomOptions[0] || null)
   }, [])
 
+  // numeric guest counts used in several places
+  const numAdults = Number(adults || 0)
+  const numChildren = Number(children || 0)
+  
+  // returns { ok, reason } for a room vs current guest counts
+  // NOTE: only enforce maximum capacities (adults and children) per user request
+  const roomSuitability = (r) => {
+    if (!r) return { ok: false, reason: "No room selected" }
+    if (numAdults > (r.maxAdults ?? 2)) return { ok: false, reason: `Allows up to ${r.maxAdults} adult(s).` }
+    if (numChildren > (r.maxChildren ?? 1)) return { ok: false, reason: `Allows up to ${r.maxChildren} child(ren).` }
+    return { ok: true, reason: "" }
+  }
+
+  // when user clicks "Continue" for a room we ensure it's included then proceed
   const onSelectRoom = (room) => {
-    setSelectedRoom(room)
+    if (!isRoomSelected(room)) addRoom(room)
+    // only proceed if combined capacity is enough
+    const suitability = multiSuitability()
+    if (!suitability.ok) {
+      alert(suitability.reason)
+      return
+    }
     setStep(2)
     // scroll to top so form is visible on small screens
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
@@ -74,10 +128,29 @@ export default function ReservationPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.agree) {
-      alert("Please accept terms and conditions.")
+
+    // basic validation before attempting to save
+    const numAdults = Number(adults || 0)
+    const numChildren = Number(children || 0)
+
+    if (!selectedRoom) {
+      alert("Please select a room before booking.")
       return
     }
+
+    if (!ci || !co) {
+      alert("Please select valid check-in and check-out dates.")
+      return
+    }
+
+    // for multi-room flow: verify combined capacity satisfies guests (only maximums)
+    const suitability = multiSuitability()
+    if (!suitability.ok) {
+      alert(suitability.reason + ". Please add more rooms.")
+      return
+    }
+
+    // all validation passed — proceed to save
     setSubmitting(true)
     try {
       const payload = {
@@ -88,7 +161,12 @@ export default function ReservationPage() {
         children: Number(children || 0),
         rooms: Number(rooms || 0),
         totalGuests,
-        selectedRoom: selectedRoom ? { id: selectedRoom.id, title: selectedRoom.title, price: selectedRoom.price } : null,
+        // include all selected room types and quantities
+        selectedRooms: selectedRooms.length
+          ? selectedRooms.map((sr) => ({ id: sr.room.id, title: sr.room.title, price: sr.room.price || 0, qty: sr.qty }))
+          : selectedRoom
+          ? [{ id: selectedRoom.id, title: selectedRoom.title, price: selectedRoom.price || 0, qty: 1 }]
+          : null,
         guest: {
           country: form.country,
           mobile: form.mobile,
@@ -124,6 +202,17 @@ export default function ReservationPage() {
   // mobile summary toggle state
   const [showSummary, setShowSummary] = useState(false)
 
+  // avoid reading window during SSR — determine small-screen only after client mount
+  const [mounted, setMounted] = useState(false)
+  const [isClientSmall, setIsClientSmall] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+    const update = () => setIsClientSmall(window.innerWidth < 768)
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
+  }, [])
+
   // small step indicator UI
   const StepHeader = () => (
     <div className="step-header">
@@ -135,10 +224,37 @@ export default function ReservationPage() {
     </div>
   )
 
+  // helper to produce concise occupancy / AC string for a room object
+  const formatRoomMeta = (r) => {
+    if (!r) return ""
+    const minA = Number.isFinite(r.minAdults) ? r.minAdults : null
+    const maxA = Number.isFinite(r.maxAdults) ? r.maxAdults : null
+    let adultsPart = ""
+    if (minA != null && maxA != null) {
+      adultsPart = minA === maxA ? `${minA} adult${minA > 1 ? "s" : ""}` : `${minA}–${maxA} adults`
+    } else if (minA != null) {
+      adultsPart = `${minA}+ adults`
+    } else if (maxA != null) {
+      adultsPart = `Up to ${maxA} adults`
+    }
+
+    const maxC = Number.isFinite(r.maxChildren) ? r.maxChildren : null
+    let childrenPart = ""
+    if (maxC != null) childrenPart = maxC === 0 ? "no children" : `up to ${maxC} child${maxC > 1 ? "ren" : ""}`
+
+    const special = r.oneAdultRequiresChild ? "1 adult requires 1 child" : ""
+    const acPart = typeof r.ac === "boolean" ? (r.ac ? "AC" : "Non-AC") : ""
+    return [adultsPart, childrenPart, special, acPart].filter(Boolean).join(" · ")
+  }
+
   return (
     <div className="reservation-page">
       {/* Left summary */}
-      <aside className={`aside ${showSummary ? "visible" : ""}`} aria-hidden={!showSummary && typeof window !== "undefined" && window.innerWidth < 768}>
+      {/* aria-hidden / visibility for small screens is decided only after mount to avoid hydration mismatch */}
+      <aside
+        className={`aside ${showSummary ? "visible" : ""}`}
+        aria-hidden={mounted && isClientSmall ? !showSummary : false}
+      >
         {/* full details (hidden on small screens unless .visible) */}
         <div className="full-details">
           <h3 className="heading">DATES</h3>
@@ -161,10 +277,47 @@ export default function ReservationPage() {
 
           <h4 className="subheading">SELECTED ROOM</h4>
           <div className="selected-room">
-            <div className="room-title">{selectedRoom?.title || "No room selected"}</div>
-            <div className="room-price">Price per night: {selectedRoom ? `${selectedRoom.price}$` : "-"}</div>
+            {selectedRooms.length === 0 ? (
+              <>
+                <div className="room-title">{selectedRoom?.title || "No room selected"}</div>
+                <div className="room-price">Price per night: {selectedRoom ? `${selectedRoom.price}$` : "-"}</div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>{selectedRooms.length} selected</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {selectedRooms.map((sr) => (
+                    <div key={sr.room.id} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{sr.room.title} <small style={{ fontWeight: 600, color: "#666" }}>x{sr.qty}</small></div>
+                        <div style={{ color: "#666", fontSize: 13 }}>{formatRoomMeta(sr.room)}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontWeight: 700 }}>{((sr.room.price || 0) * sr.qty).toFixed(2)}$</div>
+                        <div style={{ fontSize: 12, color: "#666" }}>{(sr.room.price || 0).toFixed(2)}$ / night</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 10, fontWeight: 800, display: "flex", justifyContent: "space-between" }}>
+                  <div>Total</div>
+                  <div>{selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$</div>
+                </div>
+                {/* combined suitability hint */}
+                {(() => {
+                  const s = multiSuitability()
+                  return !s.ok ? (
+                    <div style={{ marginTop: 8, color: "#b91c1c", fontSize: 13 }}>
+                      {`Not suitable: ${s.reason}`}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 8, color: "#065f46", fontSize: 13 }}>Selected rooms cover your guest count</div>
+                  )
+                })()}
+              </>
+            )}
             <div className="room-details">
-              <div className="row"><div>Space Price</div><div>{selectedRoom ? `${(selectedRoom.price).toFixed(2)}$` : "-"}</div></div>
+              <div className="row"><div>Space Price</div><div>{selectedRooms.length ? `${selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$` : (selectedRoom ? `${(selectedRoom.price).toFixed(2)}$` : "-")}</div></div>
               <div className="row"><div>Tax</div><div>FREE</div></div>
             </div>
           </div>
@@ -180,7 +333,13 @@ export default function ReservationPage() {
           aria-expanded={showSummary}
         >
           <div className="total-left">TOTAL</div>
-          <div className="total-right">{selectedRoom ? `${(selectedRoom.price * Math.max(1,nights)).toFixed(2)}$` : "-"}</div>
+          <div className="total-right">
+            {selectedRooms.length
+              ? `${(selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0) * Math.max(1, nights)).toFixed(2)}$`
+              : selectedRoom
+              ? `${(selectedRoom.price * Math.max(1, nights)).toFixed(2)}$`
+              : "-"}
+          </div>
           <div className={`chev ${showSummary ? "open" : ""}`}>▾</div>
         </div>
       </aside>
@@ -206,21 +365,54 @@ export default function ReservationPage() {
               <section>
                 <h2 className="section-title">Choose a room</h2>
                 <div className="room-grid" role="list">
-                  {roomOptions.map((r) => (
-                    <div key={r.id} className={`room-card ${selectedRoom?.id === r.id ? "selected" : ""}`} role="listitem">
-                      <div className="room-img" style={{ backgroundImage: `url(${r.img})` }} />
-                      <div className="room-row">
-                        <div>
-                          <div className="room-name">{r.title}</div>
-                          <div className="room-rate">{r.price}$ / night</div>
-                        </div>
-                        <div className="room-actions">
-                          <button onClick={() => setSelectedRoom(r)} className={`btn small ${selectedRoom?.id === r.id ? "primary" : "muted"}`}>Select</button>
-                          <button onClick={() => onSelectRoom(r)} className="btn continue">Continue</button>
+                  {roomOptions.map((r) => {
+                    // if we add this room (or it's already added) what is combined capacity?
+                    const already = selectedRooms.find((sr) => String(sr.room.id) === String(r.id))
+                    const tempList = already ? selectedRooms : [...selectedRooms, { room: r, qty: 1 }]
+                    const suitability = multiSuitability(tempList)
+                    return (
+                      <div key={r.id} className={`room-card ${already ? "selected" : ""}`} role="listitem">
+                        <div className="room-img" style={{ backgroundImage: `url(${r.img})` }} />
+                        <div className="room-row">
+                          <div>
+                            <div className="room-name">{r.title}</div>
+                            <div className="room-rate">{r.price}$ / night</div>
+                            {/* occupancy / AC details */}
+                            <div className="room-meta" style={{ marginTop: 6, color: "#555", fontSize: 13, fontWeight: 600 }}>
+                              {formatRoomMeta(r)}
+                            </div>
+                            {/* quick hint when adding this room would still be insufficient */}
+                            {!suitability.ok && (
+                              <div style={{ marginTop: 6, color: "#b91c1c", fontSize: 13 }}>
+                                {suitability.reason}
+                              </div>
+                            )}
+                          </div>
+                          <div className="room-actions">
+                            {/* toggle add/remove */}
+                            {!already ? (
+                              <button onClick={() => addRoom(r)} className="btn small muted">Add</button>
+                            ) : (
+                              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                <button onClick={() => setRoomQty(r.id, Math.max(1, already.qty - 1))} className="btn small muted">-</button>
+                                <div style={{ minWidth: 28, textAlign: "center", fontWeight: 800 }}>{already.qty}</div>
+                                <button onClick={() => setRoomQty(r.id, already.qty + 1)} className="btn small muted">+</button>
+                                <button onClick={() => removeRoom(r)} className="btn small">Remove</button>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => onSelectRoom(r)}
+                              className="btn continue"
+                              disabled={!suitability.ok}
+                              title={!suitability.ok ? suitability.reason : `Continue with ${r.title}`}
+                            >
+                              Continue
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </section>
             )}
