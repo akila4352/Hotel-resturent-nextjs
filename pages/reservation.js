@@ -231,11 +231,54 @@ export default function ReservationPage() {
       // push to Realtime DB under 'reservations'
       await push(dbRef(rtdb, "reservations"), payload)
 
-      // show immediate browser confirmation then update UI and redirect to home
+      // After saving reservation, attempt to verify/sync remote Booking.com iCal via our proxy.
+      // Helper: fetch iCal through /api/fetch-ical and count unique DTSTART dates (fallback to VEVENT count).
+      const syncBookingComCalendar = async () => {
+        try {
+          const iCalUrl = process.env.NEXT_PUBLIC_TRIPLE_ICAL
+          if (!iCalUrl) return { ok: false, message: "No remote calendar configured." }
+          const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
+          const res = await fetch(proxyUrl)
+          if (!res.ok) return { ok: false, message: `Failed to fetch iCal: ${res.status} ${res.statusText}` }
+          const text = await res.text()
+          // try to extract DTSTART YYYYMMDD occurrences
+          const dtMatches = []
+          const dtRegex = /DTSTART(?:;[^:]*)?:(\d{8})/gi
+          let m
+          while ((m = dtRegex.exec(text)) !== null) dtMatches.push(m[1])
+          let uniqueCount = 0
+          if (dtMatches.length) {
+            uniqueCount = new Set(dtMatches).size
+          } else {
+            // fallback: count VEVENT blocks
+            const evtMatches = (text.match(/BEGIN:VEVENT/gi) || []).length
+            uniqueCount = evtMatches
+          }
+          return { ok: true, count: uniqueCount }
+        } catch (err) {
+          return { ok: false, message: err?.message || "Unknown error" }
+        }
+      }
+
+      // Inform user the booking was saved
       alert("Booking request saved. Our team will contact you within 3 hours.")
+
+      // Attempt calendar sync verification and alert result
+      try {
+        const sync = await syncBookingComCalendar()
+        if (sync.ok) {
+          alert(`Calendar sync complete. ${sync.count} blocked date(s) retrieved from remote calendar.`)
+        } else {
+          alert(`Calendar sync failed: ${sync.message}`)
+        }
+      } catch (syncErr) {
+        console.error("Calendar sync error:", syncErr)
+        alert("Calendar sync failed: Unknown error")
+      }
+
       setSaved(true)
       setSubmitting(false)
-      // navigate to home after a short delay so user sees the alert
+      // navigate to home after a short delay so user sees the alerts
       setTimeout(() => {
         router.push("/").catch(() => {})
       }, 1200)

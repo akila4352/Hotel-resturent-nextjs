@@ -203,11 +203,15 @@ export default function BookingBox({
       if (!res.ok) throw new Error(`Failed to fetch iCal: ${res.status} ${res.statusText}`)
       const text = await res.text()
       const parsed = await parseICal(text)
+      // update UI state and log result instead of alerting the user
+      setBlockedDates(parsed)
       const uniq = new Set(parsed.map((d) => d.toISOString().slice(0, 10)))
-      alert(`Calendar sync complete. ${uniq.size} blocked date(s) retrieved from remote calendar.`)
+      console.log(`Calendar sync complete. ${uniq.size} blocked date(s) retrieved from remote calendar.`)
     } catch (err) {
       console.error("Calendar sync error:", err)
-      alert(`Calendar sync failed: ${err?.message || "Unknown error"}`)
+      // keep flow silent for users — log error and clear any temporary blocked dates
+      setBlockedDates([])
+      console.error("Calendar sync failed:", err?.message || "Unknown error")
     } finally {
       setSyncing(false)
       // Navigate after user has dismissed the alert
