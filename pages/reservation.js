@@ -231,49 +231,75 @@ export default function ReservationPage() {
       // push to Realtime DB under 'reservations'
       await push(dbRef(rtdb, "reservations"), payload)
 
-      // After saving reservation, attempt to verify/sync remote Booking.com iCal via our proxy.
-      // Helper: fetch iCal through /api/fetch-ical and count unique DTSTART dates (fallback to VEVENT count).
-      const syncBookingComCalendar = async () => {
+      // --- Attempt to push the booking as an ICS event to the remote calendar (Booking.com) ---
+      // Build a minimal ICS representing the reserved date range (DTSTART inclusive, DTEND exclusive)
+      const buildIcsForReservation = (guest, startDateIso, endDateIso) => {
+        const formatDate = (iso) => {
+          const dt = new Date(iso)
+          const y = dt.getUTCFullYear().toString().padStart(4, "0")
+          const m = (dt.getUTCMonth() + 1).toString().padStart(2, "0")
+          const d = dt.getUTCDate().toString().padStart(2, "0")
+          return `${y}${m}${d}`
+        }
+        const dtstamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
+        const uid = `res-${Date.now()}@${typeof window !== "undefined" ? window.location.hostname : "example.com"}`
+        const dtstart = formatDate(startDateIso)
+        const dtend = formatDate(endDateIso) // iCal DTEND is exclusive for DATE values
+
+        const summary = `Reservation: ${guest.firstName || ""} ${guest.lastName || ""}`.trim()
+        const description = [
+          `Guests: adults=${payload.adults}, children=${payload.children}, rooms=${payload.rooms}`,
+          `Nights: ${payload.nights}`,
+          `Email: ${guest.email || ""}`,
+          `Phone: ${guest.mobile || ""}`,
+        ].filter(Boolean).join("\\n")
+
+        return [
+          "BEGIN:VCALENDAR",
+          "VERSION:2.0",
+          "PRODID:-//YourSite//ReservationSync//EN",
+          "CALSCALE:GREGORIAN",
+          "BEGIN:VEVENT",
+          `UID:${uid}`,
+          `DTSTAMP:${dtstamp}`,
+          `DTSTART;VALUE=DATE:${dtstart}`,
+          `DTEND;VALUE=DATE:${dtend}`,
+          `SUMMARY:${summary}`,
+          `DESCRIPTION:${description}`,
+          `STATUS:CONFIRMED`,
+          "END:VEVENT",
+          "END:VCALENDAR",
+        ].join("\r\n")
+      }
+
+      // Try to POST the ICS to our proxy which will attempt to push it to the remote URL.
+      const tryPushIcs = async (ics) => {
         try {
           const iCalUrl = process.env.NEXT_PUBLIC_TRIPLE_ICAL
           if (!iCalUrl) return { ok: false, message: "No remote calendar configured." }
           const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
-          const res = await fetch(proxyUrl)
-          if (!res.ok) return { ok: false, message: `Failed to fetch iCal: ${res.status} ${res.statusText}` }
-          const text = await res.text()
-          // try to extract DTSTART YYYYMMDD occurrences
-          const dtMatches = []
-          const dtRegex = /DTSTART(?:;[^:]*)?:(\d{8})/gi
-          let m
-          while ((m = dtRegex.exec(text)) !== null) dtMatches.push(m[1])
-          let uniqueCount = 0
-          if (dtMatches.length) {
-            uniqueCount = new Set(dtMatches).size
-          } else {
-            // fallback: count VEVENT blocks
-            const evtMatches = (text.match(/BEGIN:VEVENT/gi) || []).length
-            uniqueCount = evtMatches
-          }
-          return { ok: true, count: uniqueCount }
+          const res = await fetch(proxyUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ics, method: "PUT" }), // try PUT by default
+          })
+          const json = await res.json().catch(() => ({ ok: false, message: `HTTP ${res.status}` }))
+          if (!res.ok || !json.ok) return { ok: false, message: json?.message || `Remote responded ${res.status}` }
+          return { ok: true, message: json.message || "Pushed" }
         } catch (err) {
           return { ok: false, message: err?.message || "Unknown error" }
         }
       }
 
-      // Inform user the booking was saved
-      alert("Booking request saved. Our team will contact you within 3 hours.")
+      // build ICS and attempt push (DTEND uses checkOut date)
+      const ics = buildIcsForReservation(payload.guest || {}, payload.checkIn, payload.checkOut)
+      const pushResult = await tryPushIcs(ics)
 
-      // Attempt calendar sync verification and alert result
-      try {
-        const sync = await syncBookingComCalendar()
-        if (sync.ok) {
-          alert(`Calendar sync complete. ${sync.count} blocked date(s) retrieved from remote calendar.`)
-        } else {
-          alert(`Calendar sync failed: ${sync.message}`)
-        }
-      } catch (syncErr) {
-        console.error("Calendar sync error:", syncErr)
-        alert("Calendar sync failed: Unknown error")
+      // Inform user about overall outcome: reservation saved + calendar push result
+      if (pushResult.ok) {
+        alert(`Booking request saved. Remote calendar updated: ${pushResult.message}`)
+      } else {
+        alert(`Booking request saved. Remote calendar update failed: ${pushResult.message}`)
       }
 
       setSaved(true)

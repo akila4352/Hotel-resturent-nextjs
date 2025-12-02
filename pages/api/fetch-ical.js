@@ -5,6 +5,45 @@ export default async function handler(req, res) {
     return
   }
 
+  // If caller wants to push an ICS to the remote calendar, accept POST with JSON body { ics, method }.
+  if (req.method === "POST") {
+    try {
+      const { ics, method } = req.body || {}
+      if (!ics || typeof ics !== "string") {
+        res.status(400).json({ error: "Missing ics in request body" })
+        return
+      }
+      // Basic validation: only allow http(s) URLs to avoid SSRF; adjust host checks if needed.
+      const parsedPost = new URL(url)
+      if (!["http:", "https:"].includes(parsedPost.protocol)) {
+        res.status(400).send("Invalid protocol")
+        return
+      }
+      // Try to PUT (or specified method) the ICS payload to the remote URL.
+      const pushMethod = (method || "PUT").toUpperCase()
+      const r2 = await fetch(url, {
+        method: pushMethod,
+        headers: {
+          "Content-Type": "text/calendar; charset=utf-8",
+          "User-Agent": "Mozilla/5.0 (compatible; Next.js)",
+        },
+        body: ics,
+      })
+      if (!r2.ok) {
+        const msg = `Remote server responded ${r2.status} ${r2.statusText}`
+        console.error("fetch-ical push failed:", msg, url)
+        res.status(502).json({ ok: false, status: r2.status, statusText: r2.statusText, message: msg })
+        return
+      }
+      res.status(200).json({ ok: true, message: "ICS pushed successfully", status: r2.status })
+      return
+    } catch (err) {
+      console.error("fetch-ical POST error:", err)
+      res.status(500).json({ ok: false, message: "Server error pushing ICS" })
+      return
+    }
+  }
+
   try {
     // Basic validation: only allow http(s) URLs to avoid SSRF; adjust host checks if needed.
     const parsed = new URL(url)
