@@ -4,25 +4,24 @@ export default async function handler(req, res) {
     res.status(400).send("Missing url query")
     return
   }
-
+ 
   try {
-    // Basic validation: only allow http(s) URLs to avoid SSRF; adjust host checks if needed.
     const parsed = new URL(url)
     if (!["http:", "https:"].includes(parsed.protocol)) {
       res.status(400).send("Invalid protocol")
       return
-    } // Optionally restrict to certain hosts/domains:
+    }
 
-    // Use the built-in fetch provided by the Node runtime (Node 18+ / Next.js)
-    // Add common headers to improve chances of a successful Booking.com response.
+    // Force fresh fetch and avoid caching of proxy responses
     const r = await fetch(url, {
       method: "GET",
       headers: {
         "Accept": "text/calendar, text/plain, */*;q=0.1",
         "User-Agent": "Mozilla/5.0 (compatible; Next.js)",
-        // optionally add Referer if Booking.com expects one:
-        // "Referer": "https://your-site.example"
       },
+      // don't let node-fetch cache results (if runtime supports)
+      // cf. https://github.com/node-fetch/node-fetch/issues/1056
+      // cache: "no-store",
     })
 
     if (!r.ok) {
@@ -34,7 +33,6 @@ export default async function handler(req, res) {
 
     const text = await r.text()
 
-    // Basic validation: ensure returned content looks like an iCal file
     const lc = (text || "").toUpperCase()
     if (!lc.includes("BEGIN:VCALENDAR") && !lc.includes("BEGIN:VFREEBUSY") && !lc.includes("BEGIN:VEVENT")) {
       const snippet = (text || "").slice(0, 2000)
@@ -46,8 +44,12 @@ export default async function handler(req, res) {
       return
     }
 
-    // Return plain text iCal to client
+    // Prevent caching of the proxy response so clients always get fresh iCal
     res.setHeader("Content-Type", "text/plain; charset=utf-8")
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0")
+    res.setHeader("Pragma", "no-cache")
+    res.setHeader("Expires", "0")
+
     res.status(200).send(text)
   } catch (err) {
     console.error("fetch-ical error:", err)

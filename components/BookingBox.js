@@ -38,15 +38,18 @@ export default function BookingBox({
     return s
   }, [blockedDates])
 
-  // parse simple iCal: extract DTSTART/DTEND from VEVENTs (supports YYYYMMDD and YYYYMMDDTHHMMSSZ)
+  // parse simple iCal: extract DTSTART/DTEND from VEVENTs and FREEBUSY ranges from VFREEBUSY
   const parseICal = async (text) => {
     const lines = text.split(/\r?\n/)
     const events = []
+    const freeBusyRanges = []
     let inEvent = false
+    let inFreeBusy = false
     let cur = {}
     for (let raw of lines) {
       const line = raw.trim()
       if (!line) continue
+
       if (line === "BEGIN:VEVENT") {
         inEvent = true
         cur = { status: "CONFIRMED" }
@@ -54,7 +57,6 @@ export default function BookingBox({
       }
       if (line === "END:VEVENT") {
         inEvent = false
-        // ignore cancelled events
         if (cur.status && String(cur.status).toUpperCase() === "CANCELLED") {
           cur = {}
           continue
@@ -63,42 +65,67 @@ export default function BookingBox({
         cur = {}
         continue
       }
-      if (!inEvent) continue
 
-      // capture DTSTART/DTEND/STATUS/SUMMARY lines robustly (handle params like DTSTART;VALUE=DATE:...)
-      if (line.toUpperCase().startsWith("DTSTART")) {
-        const idx = line.indexOf(":")
-        if (idx !== -1) cur.dtstart = line.slice(idx + 1)
+      if (line === "BEGIN:VFREEBUSY") {
+        inFreeBusy = true
         continue
       }
-      if (line.toUpperCase().startsWith("DTEND")) {
-        const idx = line.indexOf(":")
-        if (idx !== -1) cur.dtend = line.slice(idx + 1)
+      if (line === "END:VFREEBUSY") {
+        inFreeBusy = false
         continue
       }
-      if (line.toUpperCase().startsWith("STATUS")) {
-        const idx = line.indexOf(":")
-        if (idx !== -1) cur.status = line.slice(idx + 1)
-        continue
+
+      if (inEvent) {
+        if (line.toUpperCase().startsWith("DTSTART")) {
+          const idx = line.indexOf(":")
+          if (idx !== -1) cur.dtstart = line.slice(idx + 1)
+          continue
+        }
+        if (line.toUpperCase().startsWith("DTEND")) {
+          const idx = line.indexOf(":")
+          if (idx !== -1) cur.dtend = line.slice(idx + 1)
+          continue
+        }
+        if (line.toUpperCase().startsWith("STATUS")) {
+          const idx = line.indexOf(":")
+          if (idx !== -1) cur.status = line.slice(idx + 1)
+          continue
+        }
+        if (line.toUpperCase().startsWith("SUMMARY")) {
+          const idx = line.indexOf(":")
+          if (idx !== -1) cur.summary = line.slice(idx + 1)
+          continue
+        }
       }
-      if (line.toUpperCase().startsWith("SUMMARY")) {
-        const idx = line.indexOf(":")
-        if (idx !== -1) cur.summary = line.slice(idx + 1)
-        continue
+
+      if (inFreeBusy) {
+        // FREEBUSY lines may contain one or more ranges separated by commas after the colon
+        // e.g. FREEBUSY:20250101/20250103 or FREEBUSY;FBTYPE=BUSY:20250101T120000Z/20250102T120000Z
+        if (line.toUpperCase().startsWith("FREEBUSY")) {
+          const idx = line.indexOf(":")
+          if (idx === -1) continue
+          const payload = line.slice(idx + 1)
+          const parts = payload.split(",")
+          for (const p of parts) {
+            const range = p.split("/")
+            if (range.length === 2) {
+              freeBusyRanges.push({ start: range[0], end: range[1] })
+            }
+          }
+        }
       }
     }
 
-    // expand events to array of date objects (inclusive of start, exclusive of dtend per iCal; subtract one day)
-    const out = []
+    // helper: parse date strings (YYYYMMDD or YYYYMMDDTHHMMSSZ or ISO)
     const toDate = (val) => {
       if (!val) return null
-      // YYYYMMDD or YYYYMMDDTHHMMSSZ
+      // strip timezone Z for simple parse and fallback to Date()
       const m = val.match(/^(\d{4})(\d{2})(\d{2})/)
       if (m) {
         return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
       }
       const dd = new Date(val)
-      return isNaN(dd.getTime()) ? null : dd
+      return isNaN(dd.getTime()) ? null : new Date(dd.getFullYear(), dd.getMonth(), dd.getDate())
     }
 
     const addDays = (d, n) => {
@@ -107,17 +134,33 @@ export default function BookingBox({
       return x
     }
 
+    const out = []
+
+    // expand VEVENTs (DTEND is exclusive per iCal, so subtract one day)
     for (const ev of events) {
-      // Treat any VEVENT (including ones whose SUMMARY contains "Closed" or similar) as blocked
       const s = toDate(ev.dtstart)
       let e = toDate(ev.dtend)
       if (!s) continue
-      if (e) e = addDays(e, -1) // iCal DTEND is exclusive
+      if (e) e = addDays(e, -1)
       else e = s
       for (let d = new Date(s); d <= e; d = addDays(d, 1)) {
         out.push(new Date(d))
       }
     }
+
+    // expand FREEBUSY ranges into blocked dates (treat DTEND as inclusive -> subtract 0/1 day similarly)
+    for (const fb of freeBusyRanges) {
+      const s = toDate(fb.start)
+      let e = toDate(fb.end)
+      if (!s) continue
+      // treat end as exclusive similar to VEVENT: subtract 1 day to make it inclusive per-day blocking
+      if (e) e = addDays(e, -1)
+      else e = s
+      for (let d = new Date(s); d <= e; d = addDays(d, 1)) {
+        out.push(new Date(d))
+      }
+    }
+
     return out
   }
 
@@ -136,9 +179,9 @@ export default function BookingBox({
     let cancelled = false
     ;(async () => {
       try {
-        // call our server-side proxy to avoid CORS issues
-        const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(url)}`
-        const res = await fetch(proxyUrl)
+        // cache-busting param to ensure fresh feed each time
+        const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(url)}&t=${Date.now()}`
+        const res = await fetch(proxyUrl, { cache: "no-store", headers: { "pragma": "no-cache" } })
         if (!res.ok) throw new Error("Failed to fetch iCal via proxy")
         const text = await res.text()
         if (cancelled) return
@@ -475,7 +518,7 @@ export default function BookingBox({
               }}
               rangeColors={["#3b82f6"]}
             />
-          </div>
+          </div> 
         </div>
       )}
     </div>
