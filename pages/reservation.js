@@ -277,6 +277,26 @@ export default function ReservationPage() {
         try {
           const iCalUrl = process.env.NEXT_PUBLIC_TRIPLE_ICAL
           if (!iCalUrl) return { ok: false, message: "No remote calendar configured." }
+
+          // Detect Booking.com export/read-only URLs and avoid attempting to push there.
+          // Booking.com export endpoints (like the one you used) are typically read-only and return 500 on PUT.
+          try {
+            const parsed = new URL(iCalUrl)
+            const host = (parsed.hostname || "").toLowerCase()
+            const path = (parsed.pathname || "").toLowerCase()
+            if (host.includes("booking.com") || path.includes("/v1/export")) {
+              return {
+                ok: false,
+                message:
+                  "Configured calendar appears to be a Booking.com export (read-only). Automatic push is not supported. Use Booking.com partner API / channel manager or import the generated .ics manually.",
+              }
+            }
+          } catch (e) {
+            // ignore parsing errors and continue to attempt push
+            console.warn("tryPushIcs: failed to parse iCalUrl", e)
+          }
+
+          // Non-Booking.com destinations: attempt POST -> proxy -> remote PUT
           const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
           const res = await fetch(proxyUrl, {
             method: "POST",
@@ -299,7 +319,14 @@ export default function ReservationPage() {
       if (pushResult.ok) {
         alert(`Booking request saved. Remote calendar updated: ${pushResult.message}`)
       } else {
-        alert(`Booking request saved. Remote calendar update failed: ${pushResult.message}`)
+        // Give a clearer message when push not possible (e.g. Booking.com export URLs are read-only)
+        if (String(pushResult.message || "").toLowerCase().includes("booking.com") || String(pushResult.message || "").toLowerCase().includes("read-only")) {
+          alert(
+            "Booking request saved. Automatic remote calendar update was not performed because the configured calendar is read-only (Booking.com export). Use Booking.com's partner API or a channel manager to sync availability, or import the generated .ics manually."
+          )
+        } else {
+          alert(`Booking request saved. Remote calendar update failed: ${pushResult.message}`)
+        }
       }
 
       setSaved(true)
