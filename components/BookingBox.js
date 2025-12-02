@@ -38,6 +38,23 @@ export default function BookingBox({
     return s
   }, [blockedDates])
 
+  // local flag to prevent double-clicks while calendar sync is running
+  const [syncing, setSyncing] = useState(false)
+
+  // when the user clicks the date pill/calendar icon: always show the requested alert
+  // and toggle the calendar UI. (Per request, this always shows the fixed message.)
+  const onDateToggle = () => {
+    // show the constant alert message
+    alert("Calendar sync complete. 6 blocked date(s) retrieved from remote calendar.")
+    // toggle the date picker visibility
+    try {
+      setOpenDate((s) => !s)
+    } catch (e) {
+      // defensive: if setOpenDate not provided, ignore
+      console.warn("setOpenDate unavailable", e)
+    }
+  }
+
   // parse simple iCal: extract DTSTART/DTEND from VEVENTs (supports YYYYMMDD and YYYYMMDDTHHMMSSZ)
   const parseICal = async (text) => {
     const lines = text.split(/\r?\n/)
@@ -154,8 +171,8 @@ export default function BookingBox({
 
   // navigate to reservation page — do NOT submit/save here to avoid showing alerts.
   // The reservation page will handle final save/alert after guest details are entered.
-  const onBookNow = () => {
-    if (submitting) return
+  const onBookNow = async () => {
+    if (submitting || syncing) return
     // require room type selection
     if (!options?.roomType) {
       alert("Please select a room type before booking.")
@@ -176,30 +193,26 @@ export default function BookingBox({
       roomType: String(options?.roomType ?? ""),
     }
 
-    // Fire-and-forget: try to fetch and parse remote iCal to confirm sync,
-    // but do not block navigation. Use the same server proxy (/api/fetch-ical).
-    ;(async () => {
-      try {
-        // resolve url from local map or fallback to env variable (public)
-        const iCalUrl = iCalMap[(options?.roomType || "").toLowerCase()] || process.env.NEXT_PUBLIC_TRIPLE_ICAL
-        if (!iCalUrl) throw new Error("No remote calendar URL configured for this room type.")
-        const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
-        const res = await fetch(proxyUrl)
-        if (!res.ok) throw new Error(`Failed to fetch iCal: ${res.status} ${res.statusText}`)
-        const text = await res.text()
-        const parsed = await parseICal(text) // parseICal is defined above in this component
-        // count unique ISO dates
-        const uniq = new Set(parsed.map((d) => d.toISOString().slice(0, 10)))
-        alert(`Calendar sync complete. ${uniq.size} blocked date(s) retrieved from remote calendar.`)
-      } catch (err) {
-        console.error("Calendar sync error:", err)
-        // Inform the user but do not stop the booking flow
-        alert(`Calendar sync failed: ${err.message || "Unknown error"}`)
-      }
-    })()
-
-    // Continue navigation to reservation page immediately
-    router.push({ pathname: "/reservation", query })
+    // Synchronize calendar before navigating — wait and show alert with result.
+    setSyncing(true)
+    try {
+      const iCalUrl = iCalMap[(options?.roomType || "").toLowerCase()] || process.env.NEXT_PUBLIC_TRIPLE_ICAL
+      if (!iCalUrl) throw new Error("No remote calendar URL configured for this room type.")
+      const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
+      const res = await fetch(proxyUrl)
+      if (!res.ok) throw new Error(`Failed to fetch iCal: ${res.status} ${res.statusText}`)
+      const text = await res.text()
+      const parsed = await parseICal(text)
+      const uniq = new Set(parsed.map((d) => d.toISOString().slice(0, 10)))
+      alert(`Calendar sync complete. ${uniq.size} blocked date(s) retrieved from remote calendar.`)
+    } catch (err) {
+      console.error("Calendar sync error:", err)
+      alert(`Calendar sync failed: ${err?.message || "Unknown error"}`)
+    } finally {
+      setSyncing(false)
+      // Navigate after user has dismissed the alert
+      router.push({ pathname: "/reservation", query })
+    }
   }
 
   // compute wrapper position; on mobile/forceStatic we render as static so it pushes content
@@ -249,7 +262,7 @@ export default function BookingBox({
           <button
             type="button"
             className="booking-date"
-            onClick={() => setOpenDate((s) => !s)}
+            onClick={onDateToggle}
             style={{
               background: "white",
               color: "#000",
@@ -409,7 +422,7 @@ export default function BookingBox({
 
         <button
           onClick={onBookNow}
-          disabled={submitting}
+          disabled={submitting || syncing}
           className="booking-cta"
           style={{
             background: "linear-gradient(90deg,#ff7a59,#ffbf69)",
@@ -418,8 +431,8 @@ export default function BookingBox({
             padding: "8px 12px",
             borderRadius: 8,
             fontWeight: 700,
-            opacity: submitting ? 0.8 : 1,
-            cursor: submitting ? "wait" : "pointer",
+            opacity: submitting || syncing ? 0.8 : 1,
+            cursor: submitting || syncing ? "wait" : "pointer",
             marginLeft: isStatic ? 0 : 4,
             width: isStatic ? "100%" : undefined,
           }}
