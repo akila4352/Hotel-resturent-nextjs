@@ -1,11 +1,12 @@
 export default async function handler(req, res) {
   const url = req.query?.url;
+
   if (!url) {
     res.status(400).send("Missing url query");
     return;
   }
 
-  // Always return valid ICS to avoid Booking.com sync failures
+  // Always return valid ICS to avoid Booking.com sync errors
   const minimalICal = () =>
     [
       "BEGIN:VCALENDAR",
@@ -17,75 +18,29 @@ export default async function handler(req, res) {
     ].join("\r\n");
 
   // --------------------------------------
-  // (OPTIONAL) POST → push ICS to remote
-  // --------------------------------------
-  if (req.method === "POST") {
-    try {
-      const { ics, method } = req.body || {};
-
-      if (!ics || typeof ics !== "string") {
-        res.status(400).json({ error: "Missing ics in request body" });
-        return;
-      }
-
-      const parsed = new URL(url);
-      if (!["http:", "https:"].includes(parsed.protocol)) {
-        res.status(400).json({ error: "Invalid protocol" });
-        return;
-      }
-
-      const pushMethod = (method || "PUT").toUpperCase();
-      const remote = await fetch(url, {
-        method: pushMethod,
-        headers: {
-          "Content-Type": "text/calendar; charset=utf-8",
-          "User-Agent": "Mozilla/5.0 (compatible; Next.js)"
-        },
-        body: ics
-      });
-
-      if (!remote.ok) {
-        res.status(502).json({
-          ok: false,
-          status: remote.status,
-          statusText: remote.statusText
-        });
-        return;
-      }
-
-      res.status(200).json({
-        ok: true,
-        message: "ICS pushed successfully"
-      });
-      return;
-    } catch (err) {
-      console.error("POST ICS push error:", err);
-      res.status(500).json({ ok: false, message: "Server error pushing ICS" });
-      return;
-    }
-  }
-
-  // --------------------------------------
-  // GET → return ICS from Booking.com link
+  // GET → Return ICS from remote URL
   // --------------------------------------
   try {
     const parsed = new URL(url);
+
+    // Only allow http/https
     if (!["http:", "https:"].includes(parsed.protocol)) {
       res.setHeader("Content-Type", "text/calendar; charset=utf-8");
       res.status(200).send(minimalICal());
       return;
     }
 
+    // Fetch remote ICS
     const r = await fetch(url, {
       method: "GET",
       headers: {
         "Accept": "text/calendar, text/plain, */*",
-        "User-Agent": "Mozilla/5.0 (compatible; Next.js)"
+        "User-Agent": "Mozilla/5.0"
       }
     });
 
     if (!r.ok) {
-      console.error("Remote calendar error:", r.status, r.statusText);
+      console.error("Remote ICS fetch failed:", r.status, r.statusText);
       res.setHeader("Content-Type", "text/calendar; charset=utf-8");
       res.status(200).send(minimalICal());
       return;
@@ -93,24 +48,25 @@ export default async function handler(req, res) {
 
     const text = await r.text();
 
-    const check = text.toUpperCase();
-    const looksValid =
-      check.includes("BEGIN:VCALENDAR") ||
-      check.includes("BEGIN:VEVENT") ||
-      check.includes("BEGIN:VFREEBUSY");
+    const upper = text.toUpperCase();
+    const validICS =
+      upper.includes("BEGIN:VCALENDAR") ||
+      upper.includes("BEGIN:VEVENT") ||
+      upper.includes("BEGIN:VFREEBUSY");
 
-    if (!looksValid) {
-      console.error("Invalid ICS returned:", text.slice(0, 200));
+    if (!validICS) {
+      console.error("Invalid ICS content");
       res.setHeader("Content-Type", "text/calendar; charset=utf-8");
       res.status(200).send(minimalICal());
       return;
     }
 
-    // Success → return raw ICS
+    // SUCCESS → return ICS unchanged
     res.setHeader("Content-Type", "text/calendar; charset=utf-8");
     res.status(200).send(text);
+
   } catch (err) {
-    console.error("GET ICS fetch error:", err);
+    console.error("fetch-ical error:", err);
     res.setHeader("Content-Type", "text/calendar; charset=utf-8");
     res.status(200).send(minimalICal());
   }
