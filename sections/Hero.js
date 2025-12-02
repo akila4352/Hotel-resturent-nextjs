@@ -17,7 +17,7 @@ import { ref as dbRef, push } from "firebase/database"
 import BookingBox from "@/components/BookingBox"
 
 const Hero = () => {
-  const router = useRouter()
+  const router = useRouter() 
  
   // Booking state (restored to match booking UI)
   // const [destination, setDestination] = useState("")

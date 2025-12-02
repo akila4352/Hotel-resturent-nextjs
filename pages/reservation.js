@@ -12,7 +12,7 @@ export default function ReservationPage() {
   // compute a normalized roomType from query (lowercase)
   const queryRoomType = qRoomType ? String(qRoomType).toLowerCase() : ""
 
-  // parse dates safely
+  // parse dates saf ely
   const [ci, setCi] = useState(null)
   const [co, setCo] = useState(null)
   useEffect(() => { 
@@ -231,8 +231,27 @@ export default function ReservationPage() {
       // push to Realtime DB under 'reservations'
       await push(dbRef(rtdb, "reservations"), payload)
 
-      // show immediate browser confirmation then update UI and redirect to home
-      alert("Booking request saved. Our team will contact you within 3 hours.")
+      // NEW: attempt to block the Booking.com calendar by forwarding payload to server proxy
+      try {
+        const blockRes = await fetch("/api/fetch-ical", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "block", reservation: payload }),
+        })
+        if (blockRes.ok) {
+          // remote acknowledged block request
+          const data = await blockRes.json().catch(() => null)
+          alert("Booking request saved and calendar block requested. Remote response: " + (data?.message || "OK"))
+        } else {
+          // remote did not accept the block request — show warning but keep saved DB entry
+          const txt = await blockRes.text().catch(() => "")
+          alert("Booking saved locally, but failed to request calendar block: " + (txt || blockRes.status))
+        }
+      } catch (blkErr) {
+        console.error("Failed to call block API:", blkErr)
+        alert("Booking saved locally. Could not contact calendar-blocking service.")
+      }
+
       setSaved(true)
       setSubmitting(false)
       // navigate to home after a short delay so user sees the alert
