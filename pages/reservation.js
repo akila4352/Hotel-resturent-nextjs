@@ -77,7 +77,11 @@ export default function ReservationPage() {
       return [...prev, { room: r, qty: 1 }]
     })
     setSelectedRoom(r)
+    // Immediately proceed to Guest Details (no Continue button needed)
+    setStep(2)
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
   }
+
   const removeRoom = (r) => {
     setSelectedRooms((prev) => prev.filter((sr) => String(sr.room.id) !== String(r.id)))
   }
@@ -145,21 +149,6 @@ export default function ReservationPage() {
     const suitability = multiSuitability()
     if (!suitability.ok) {
       alert(suitability.reason)
-      return
-    }
-    setStep(2)
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
-  }
-
-  // Central continue handler from the summary/total area (single Continue button)
-  const continueFromSummary = () => {
-    if (selectedRooms.length === 0 && !selectedRoom) {
-      alert("Please select a room before continuing.")
-      return
-    }
-    const suitability = multiSuitability()
-    if (!suitability.ok) {
-      alert(suitability.reason + ". Please add more rooms.")
       return
     }
     setStep(2)
@@ -346,6 +335,32 @@ export default function ReservationPage() {
     return () => window.removeEventListener("resize", update)
   }, [])
 
+  // Ensure navbar is forced black only on this page by toggling a body class
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.body.classList.add("reservation-navbar-black");
+      // cleanup on unmount
+      return () => document.body.classList.remove("reservation-navbar-black");
+    }
+    return undefined;
+  }, []);
+
+  // Page-only inline body padding to offset the sticky header so content isn't hidden.
+  // Sets 72px on desktop and 64px on narrow screens; restores previous padding on unmount.
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const prev = document.body.style.paddingTop || "";
+    const apply = () => {
+      document.body.style.paddingTop = window.innerWidth <= 800 ? "64px" : "72px";
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => {
+      window.removeEventListener("resize", apply);
+      document.body.style.paddingTop = prev;
+    };
+  }, []);
+
   // small step indicator UI
   const StepHeader = () => (
     <div className="step-header">
@@ -380,7 +395,7 @@ export default function ReservationPage() {
     return [adultsPart, childrenPart, special, acPart].filter(Boolean).join(" · ")
   }
 
-  return (
+  return ( 
     <div className="reservation-page">
       {/* Left summary */}
       {/* aria-hidden / visibility for small screens is decided only after mount to avoid hydration mismatch */}
@@ -456,19 +471,8 @@ export default function ReservationPage() {
 
           </div> {/* <-- ensure selected-room is closed BEFORE Continue button */}
 
-          {/* single Continue button under the totals */}
-          <div style={{ marginTop: 12 }}>
-            <button
-              type="button"
-              onClick={continueFromSummary}
-              className="btn continue aside-continue"
-              disabled={!multiSuitability().ok}
-              title={!multiSuitability().ok ? multiSuitability().reason : "Continue to Guest Details"}
-            >
-              Continue
-            </button>
-          </div>
-
+          {/* Continue action removed — adding a room now advances to Guest Details automatically */}
+ 
         </div> {/* <-- close full-details */}
 
         {/* compact total preview always visible on mobile; click to toggle details */}
@@ -489,16 +493,7 @@ export default function ReservationPage() {
               : "-"}
           </div>
 
-          {/* small Continue button in compact preview for mobile */}
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); continueFromSummary(); }}
-            className="btn small continue preview-continue"
-            disabled={!multiSuitability().ok}
-            title={!multiSuitability().ok ? multiSuitability().reason : "Continue"}
-          >
-            Continue
-          </button>
+          {/* single Continue button is available in the aside totals above; compact preview no longer shows a duplicate */}
           
           <div className={`chev ${showSummary ? "open" : ""}`}>▾</div>
         </div>
@@ -536,6 +531,7 @@ export default function ReservationPage() {
                       const tempList = already ? selectedRooms : [...selectedRooms, { room: r, qty: 1 }]
                       const suitability = multiSuitability(tempList)
                       return (
+                        
                         <div key={r.id} className={`room-card ${already ? "selected" : ""}`} role="listitem">
                           <div className="room-img" style={{ backgroundImage: `url(${r.img})` }} />
                           <div className="room-row">
@@ -760,8 +756,15 @@ export default function ReservationPage() {
         }
 
         /* aside continue button style */
-        .aside-continue{ width:100%; margin-top:8px; background:#ff7a59; color:#000; border:none; padding:10px 12px; border-radius:8px; font-weight:700; }
-        .preview-continue{ margin-left:8px; background:#ff7a59; color:#000; border:none; padding:6px 8px; border-radius:8px; font-weight:700; }
+        /* .aside-continue{ width:100%; margin-top:8px; background:#ff7a59; color:#000; border:none; padding:10px 12px; border-radius:8px; font-weight:700; } */
+        /* preview-continue removed to avoid duplicate Continue button in compact preview */
+
+        /* Force header/nav to be black on reservation page */
+        body.reservation-navbar-black .navbar,
+        body.reservation-navbar-black .header {
+          background-color: #000 !important;
+          color: #fff !important;
+        }
       `}</style>
     </div>
   )

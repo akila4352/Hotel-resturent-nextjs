@@ -119,7 +119,7 @@ export default function Carousel({ items = [] }) {
 					{first.img && (
 						<div
 							style={{
-								width: "100%",
+								width: "100%", 
 								height: "100%",
 								backgroundImage: `url(${first.img})`,
 								backgroundSize: "cover",

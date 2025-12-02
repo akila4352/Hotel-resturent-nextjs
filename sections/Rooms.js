@@ -62,7 +62,8 @@ const Rooms = () => {
           </div>
           <div className='grid-4 py'>
             {roomdata.map((item) => (
-              <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              // add a small wrapper class so styles target only these room cards
+              <div key={item.id} className="room-item" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <Card data={item} caption={item.cuisine || item.dish || item.post} />
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button
@@ -79,9 +80,52 @@ const Rooms = () => {
           </div>
         </div>
       </section>
+
+      {/* Scoped styles to make all room images the same size */}
+      <style jsx>{`
+        /* normalize image look inside our room items (catch img, picture > img, any nested img) */
+        .grid-4 .room-item :global(img),
+        .grid-4 .room-item :global(picture img),
+        .grid-4 .room-item :global(.card img) {
+          width: 100% !important;
+          height: 240px !important; /* fixed height — adjust as needed */
+          object-fit: cover !important;
+          object-position: center !important;
+          display: block !important;
+          border-radius: 20px !important; /* consistent rounded corners */
+        }
+
+        /* Ensure the Card's wrapper doesn't add a conflicting radius or clipping */
+        .grid-4 .room-item :global(.card) {
+          border-radius: 0 !important;
+          overflow: visible !important;
+        }
+
+        /* Responsive: reduce height on smaller screens */
+        @media (max-width: 1024px) {
+          .grid-4 .room-item :global(img),
+          .grid-4 .room-item :global(picture img),
+          .grid-4 .room-item :global(.card img) {
+            height: 200px !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .grid-4 .room-item :global(img),
+          .grid-4 .room-item :global(picture img),
+          .grid-4 .room-item :global(.card img) {
+            height: 180px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .grid-4 .room-item :global(img),
+          .grid-4 .room-item :global(picture img),
+          .grid-4 .room-item :global(.card img) {
+            height: 140px !important;
+          }
+        }
+      `}</style>
     </>
   )
 }
 
 export default Rooms
- 

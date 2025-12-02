@@ -216,7 +216,7 @@ export default function BookingBox({
       setSyncing(false)
       // Navigate after user has dismissed the alert
       router.push({ pathname: "/reservation", query })
-    }
+    } 
   }
 
   // compute wrapper position; on mobile/forceStatic we render as static so it pushes content
@@ -230,7 +230,7 @@ export default function BookingBox({
     zIndex: 60,
     background: isStatic ? "#ffffff" : "transparent", // make wrapper solid white on mobile/static
     color: "#000",
-    borderRadius: 12,
+    borderRadius: 0, // square corners
     border: "none",
     boxShadow: "0 10px 30px rgba(11,18,32,0.06)",
     padding: isStatic ? "12px 0" : 6,
@@ -255,7 +255,7 @@ export default function BookingBox({
           overflowX: "hidden",           // prevent horizontal scrollbar; shrink controls instead
           padding: isStatic ? "14px" : "12px 14px",
           background: isStatic ? "#ffffff" : "rgba(255,255,255,0.60)", // solid white on responsive/static
-          borderRadius: 12,
+          borderRadius: 0, /* square corners */
           border: "1px solid rgba(11,18,32,0.06)",
           boxShadow: "0 6px 18px rgba(11,18,32,0.06)",
           width: isStatic ? "100%" : undefined,
@@ -272,7 +272,7 @@ export default function BookingBox({
               color: "#000",
               border: "1px solid rgba(11,18,32,0.06)",
               padding: "8px 10px",
-              borderRadius: 8,
+              borderRadius: 0,            // square corners
               minWidth: 120,            // reduced to fit on one line
               fontWeight: 800,
               fontSize: 13,             // slightly smaller
@@ -289,10 +289,10 @@ export default function BookingBox({
               <small style={{ color: "#374151", fontWeight: 600, marginTop: 4 }}>{formattedDate(range[0].endDate)}</small>
             </div>
             <span className="date-icon" aria-hidden style={{ display: "inline-flex", alignItems: "center", color: "#000" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <rect x="3" y="4" width="18" height="16" rx="2" fill="currentColor"/>
-                <path d="M16 2V6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M8 2V6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M16 2V6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M8 2V6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </span>
           </button>
@@ -307,7 +307,7 @@ export default function BookingBox({
             aria-label="Select room type"
             style={{
               padding: "6px 8px",
-              borderRadius: 8,
+              borderRadius: 0, // square select
               border: "1px solid rgba(11,18,32,0.06)",
               background: "white",
               fontWeight: 700,
@@ -325,10 +325,10 @@ export default function BookingBox({
         {/* controls: each group uses a translucent white card */}
         <div className="booking-controls" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", overflowX: "hidden" }}>
           {/* Adult group: single .group (same structure as other controls) */}
-          <div className="group" style={{ display: "flex", alignItems: "center", gap: 6, background: "white", padding: "6px 8px", borderRadius: 8, minWidth: 90 }}>
+          <div className="group" style={{ display: "flex", alignItems: "center", gap: 6, background: "white", padding: "6px 8px", borderRadius: 0, minWidth: 90 }}>
             <span style={{ display: "inline-flex", alignItems: "center", color: "#000" }} aria-hidden>
               {/* person icon */}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="currentColor"/>
                 <path d="M4 22C4 17.5817 7.58172 14 12 14C16.4183 14 20 17.5817 20 22" fill="currentColor" opacity="0.9"/>
               </svg>
@@ -338,10 +338,10 @@ export default function BookingBox({
             {/* decrement */}
             <button
               onClick={() => handleOption("adult", "d")}
-              style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
+              style={{ padding: 6, borderRadius: 0, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
               aria-label="Decrease adults"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
               </svg>
             </button>
@@ -351,10 +351,10 @@ export default function BookingBox({
             {/* increment */}
             <button
               onClick={() => handleOption("adult", "i")}
-              style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
+              style={{ padding: 6, borderRadius: 0, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
               aria-label="Increase adults"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <rect x="11" y="4" width="2" height="16" rx="1" fill="currentColor"/>
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
               </svg>
@@ -368,24 +368,24 @@ export default function BookingBox({
             gap: 6,
             background: "white",
             padding: "6px 8px",
-            borderRadius: 8,
+            borderRadius: 0,
             minWidth: 90
           }}>
             <span style={{ display: "inline-flex", alignItems: "center", color: "#000" }} aria-hidden>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <path d="M12 12C13.6569 12 15 10.6569 15 9C15 7.34315 13.6569 6 12 6C10.3431 6 9 7.34315 9 9C9 10.6569 10.3431 12 12 12Z" fill="currentColor"/>
                 <path d="M4 20C4 16 7.58172 14 12 14C16.4183 14 20 16 20 20" fill="currentColor" opacity="0.9"/>
               </svg>
             </span>
             <label style={{ fontSize: 11, color: "#000", fontWeight: 700 }}>Children</label>
-            <button onClick={() => handleOption("children", "d")} style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Decrease children">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <button onClick={() => handleOption("children", "d")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Decrease children">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
               </svg>
             </button>
             <span style={{ minWidth: 18, textAlign: "center", color: "#000", fontSize: 13 }}>{options.children}</span>
-            <button onClick={() => handleOption("children", "i")} style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Increase children">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <button onClick={() => handleOption("children", "i")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Increase children">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <rect x="11" y="4" width="2" height="16" rx="1" fill="currentColor"/>
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
               </svg>
@@ -399,24 +399,24 @@ export default function BookingBox({
             gap: 6,
             background: "white",
             padding: "6px 8px",
-            borderRadius: 8,
+            borderRadius: 0,
             minWidth: 90
           }}>
             <span style={{ display: "inline-flex", alignItems: "center", color: "#000" }} aria-hidden>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <path d="M3 11V19H5V13H19V19H21V11C21 9.89543 20.1046 9 19 9H5C3.89543 9 3 9.89543 3 11Z" fill="currentColor"/>
                 <path d="M7 6C7 4.34315 8.34315 3 10 3H14C15.6569 3 17 4.34315 17 6V9H7V6Z" fill="currentColor" opacity="0.95"/>
               </svg>
             </span>
             <label style={{ fontSize: 11, color: "#000", fontWeight: 700 }}>Room</label>
-            <button onClick={() => handleOption("room", "d")} style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Decrease rooms">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <button onClick={() => handleOption("room", "d")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Decrease rooms">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
               </svg>
             </button>
             <span style={{ minWidth: 18, textAlign: "center", color: "#000", fontSize: 13 }}>{options.room}</span>
-            <button onClick={() => handleOption("room", "i")} style={{ padding: 6, borderRadius: 6, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Increase rooms">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <button onClick={() => handleOption("room", "i")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "1px solid rgba(11,18,32,0.06)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-label="Increase rooms">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                 <rect x="11" y="4" width="2" height="16" rx="1" fill="currentColor"/>
                 <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
               </svg>
@@ -433,7 +433,7 @@ export default function BookingBox({
             color: "#000",
             border: "none",
             padding: "8px 12px",
-            borderRadius: 8,
+            borderRadius: 0, // square CTA
             fontWeight: 700,
             opacity: submitting || syncing ? 0.8 : 1,
             cursor: submitting || syncing ? "wait" : "pointer",
@@ -458,7 +458,7 @@ export default function BookingBox({
             marginBottom: 12,
             zIndex: 80,
             background: "#ffffff",
-            borderRadius: 10,
+            borderRadius: 0, // square calendar container
             border: "1px solid rgba(11,18,32,0.06)",
             boxShadow: "0 10px 30px rgba(11,18,32,0.12)",
             overflow: "hidden",
