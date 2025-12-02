@@ -315,20 +315,10 @@ export default function ReservationPage() {
       const ics = buildIcsForReservation(payload.guest || {}, payload.checkIn, payload.checkOut)
       const pushResult = await tryPushIcs(ics)
 
-      // Inform user about overall outcome: reservation saved + calendar push result
-      if (pushResult.ok) {
-        alert(`Booking request saved. Remote calendar updated: ${pushResult.message}`)
-      } else {
-        // Give a clearer message when push not possible (e.g. Booking.com export URLs are read-only)
-        if (String(pushResult.message || "").toLowerCase().includes("booking.com") || String(pushResult.message || "").toLowerCase().includes("read-only")) {
-          alert(
-            "Booking request saved. Automatic remote calendar update was not performed because the configured calendar is read-only (Booking.com export). Use Booking.com's partner API or a channel manager to sync availability, or import the generated .ics manually."
-          )
-        } else {
-          alert(`Booking request saved. Remote calendar update failed: ${pushResult.message}`)
-        }
-      }
-
+      // Booking saved — notify user once and keep calendar push diagnostics in logs.
+      console.log("Calendar push result:", pushResult)
+      alert("Booking request saved.")
+ 
       setSaved(true)
       setSubmitting(false)
       // navigate to home after a short delay so user sees the alerts
