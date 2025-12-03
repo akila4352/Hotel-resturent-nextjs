@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 
@@ -19,10 +21,10 @@ export default function Carousel({ items = [] }) {
 	const defaultSlides = [
 		{ img: "/images/b1.jpg", title: "Hotel Amore", subtitle: "Relax, Dine & Rejuvenate", btn1: "Book Now", btn2: "Learn More", navigatePath: "/" },
 		{ img: "/images/b3.jpg", title: "Elegant Lobby", subtitle: "Warm welcome", btn1: "Explore", btn2: "Details", navigatePath: "/" },
-		{ img: "/images/b4.jpeg", title: "Fine Dining", subtitle: "Fresh local flavors", btn1: "Reserve", btn2: "Menu", navigatePath: "/menu" },
+		{ img: "/images/b4.jpeg", title: "Sea View", subtitle: "Breathtaking ocean vistas", btn1: "Reserve", btn2: "Menu", navigatePath: "/menu" },
 		{ img: "/images/b5.jpg", title: "Cozy Rooms", subtitle: "Restful nights", btn1: "Book", btn2: "Rooms", navigatePath: "/rooms" },
-		{ img: "/images/b6.jpg", title: "Poolside", subtitle: "Relax & unwind", btn1: "Reserve", btn2: "Gallery", navigatePath: "/amenities" },
-		{ img: "/images/b7.jpg", title: "Nearby Attractions", subtitle: "Explore the area", btn1: "Discover", btn2: "Map", navigatePath: "/showcase" },
+		{ img: "/images/b6.jpg", title: "Lakeside", subtitle: "Relax & unwind", btn1: "Reserve", btn2: "Gallery", navigatePath: "/amenities" },
+		{ img: "/images/b7.jpg", title: "Attractions", subtitle: "Explore the area", btn1: "Discover", btn2: "Map", navigatePath: "/showcase" },
 	];
 
 	const slides = items && items.length ? items : defaultSlides;
@@ -52,8 +54,8 @@ export default function Carousel({ items = [] }) {
 			require("slick-carousel/slick/slick.css");
 			require("slick-carousel/slick/slick-theme.css");
 		}
-		// start autoplay enabled after mount
-		const t = setTimeout(() => setAutoplayEnabled(true), 500);
+		// start autoplay enabled after mount (reduced delay)
+		const t = setTimeout(() => setAutoplayEnabled(true), 200); // was 500
 		return () => clearTimeout(t);
 	}, []);
 
@@ -66,21 +68,68 @@ export default function Carousel({ items = [] }) {
 
 	// react-slick navigation guards
 	const next = () => {
-		if (sliderRef.current && sliderRef.current.slickNext) sliderRef.current.slickNext();
+		if (sliderRef.current && sliderRef.current.slickNext) return sliderRef.current.slickNext();
+		if (sliderRef.current && sliderRef.current.innerSlider && sliderRef.current.innerSlider.slickNext) return sliderRef.current.innerSlider.slickNext();
 	};
 	const previous = () => {
-		if (sliderRef.current && sliderRef.current.slickPrev) sliderRef.current.slickPrev();
+		if (sliderRef.current && sliderRef.current.slickPrev) return sliderRef.current.slickPrev();
+		if (sliderRef.current && sliderRef.current.innerSlider && sliderRef.current.innerSlider.slickPrev) return sliderRef.current.innerSlider.slickPrev();
 	};
- 
+
+	// Ensure react-slick autoplay actually starts/stops — call instance methods when flag changes
+	useEffect(() => {
+		if (!sliderRef.current) {
+			// slider instance may not be mounted yet; retry once shortly
+			const retry = setTimeout(() => {
+				try {
+					if (!sliderRef.current) return;
+					if (autoplayEnabled) {
+						if (typeof sliderRef.current.slickPlay === "function") sliderRef.current.slickPlay();
+						else if (sliderRef.current.innerSlider && typeof sliderRef.current.innerSlider.slickPlay === "function") sliderRef.current.innerSlider.slickPlay();
+					} else {
+						if (typeof sliderRef.current.slickPause === "function") sliderRef.current.slickPause();
+						else if (sliderRef.current.innerSlider && typeof sliderRef.current.innerSlider.slickPause === "function") sliderRef.current.innerSlider.slickPause();
+					}
+				} catch (e) {
+					// ignore
+				}
+			}, 250);
+			return () => clearTimeout(retry);
+		}
+
+		// helper to call method if present on either the ref or innerSlider
+		const callMethod = (name) => {
+			try {
+				if (typeof sliderRef.current[name] === "function") {
+					sliderRef.current[name]();
+					return;
+				}
+				// some versions expose methods under innerSlider
+				if (sliderRef.current.innerSlider && typeof sliderRef.current.innerSlider[name] === "function") {
+					sliderRef.current.innerSlider[name]();
+					return;
+				}
+			} catch (e) {
+				// silent failure
+			}
+		};
+
+		if (autoplayEnabled) {
+			callMethod("slickPlay");
+		} else {
+			callMethod("slickPause");
+		}
+	}, [autoplayEnabled, mounted]);
+
 	// settings include callbacks to manage caption animations
 	const settings = {
 		dots: false,
 		infinite: true,
-		speed: 900,
+		speed: 700,            // was 900
 		slidesToShow: 1,
 		slidesToScroll: 1,
 		autoplay: autoplayEnabled,
-		autoplaySpeed: 6000,
+		autoplaySpeed: 3000,  // was 6000
 		arrows: false,
 		beforeChange: (_, next) => {
 			// disable autoplay while transitioning captions
@@ -90,8 +139,8 @@ export default function Carousel({ items = [] }) {
 		},
 		afterChange: (index) => {
 			setActiveIndex(index);
-			// small delay then re-enable autoplay
-			setTimeout(() => setAutoplayEnabled(true), 600);
+			// small delay then re-enable autoplay (reduced)
+			setTimeout(() => setAutoplayEnabled(true), 60); // was 600
 		},
 		responsive: [
 			{ breakpoint: 1024, settings: { slidesToShow: 1 } },
@@ -205,11 +254,11 @@ export default function Carousel({ items = [] }) {
 	const sliderSettings = {
 		dots: false,
 		infinite: true,
-		speed: 900,
+		speed: 700,            // was 900
 		slidesToShow: 1,
 		slidesToScroll: 1,
 		autoplay: autoplayEnabled,
-		autoplaySpeed: 6000,
+		autoplaySpeed: 3000,  // was 6000
 		arrows: false,
 		beforeChange: (_, next) => {
 			// disable autoplay while transitioning captions
@@ -219,8 +268,8 @@ export default function Carousel({ items = [] }) {
 		},
 		afterChange: (index) => {
 			setActiveIndex(index);
-			// small delay then re-enable autoplay
-			setTimeout(() => setAutoplayEnabled(true), 600);
+			// small delay then re-enable autoplay (reduced)
+			setTimeout(() => setAutoplayEnabled(true), 300); // was 600
 		},
 		responsive: [
 			{ breakpoint: 1024, settings: { slidesToShow: 1 } },
@@ -290,7 +339,8 @@ export default function Carousel({ items = [] }) {
 									<div
 										className={`hero-overlay ${isActive ? "visible" : ""}`}
 										style={{
-											transform: `translate(var(--ox, 0), var(--oy, 0))`,
+											// keep overlay centered, then apply small parallax offsets
+											transform: `translate(-50%, -50%) translate(var(--ox, 0), var(--oy, 0))`,
 										}}
 										aria-hidden
 										key={captionKey + "-" + index}
@@ -382,18 +432,18 @@ export default function Carousel({ items = [] }) {
  				.shape-2 { width: 160px; height: 160px; background: radial-gradient(circle at 60% 60%, #2fb0ff, transparent 40%); right: -50px; bottom: 12%; animation: floatSlow 10s ease-in-out infinite reverse; transform: translateZ(0); }
  				@keyframes floatSlow { 0% { transform: translateY(0); } 50% { transform: translateY(18px); } 100% { transform: translateY(0); } }
  
-				/* overlay caption */
-				/* center overlay, constrain width and add horizontal padding so text always wraps */
+				/* overlay caption - centered on the page */
 				.hero-overlay {
 					position: absolute;
-					left: 40%;
-					top: 45%; /* moved up from 50% to 45% to raise the text slightly */
+					left: 50%;
+					top: 50%;
+					/* base centering; inline transform adds parallax translate after this */
 					transform: translate(-50%, -50%);
 					text-align: center;
 					color: #fff;
 					z-index: 6;
-					width: min(980px, 80%); /* smaller max width so text doesn't reach edges */
-					padding: 0 20px;       /* ensure breathing room on narrow viewports */
+					width: min(980px, 80%);
+					padding: 0 20px;
 					box-sizing: border-box;
 					pointer-events: none;
 					opacity: 0;
@@ -401,141 +451,121 @@ export default function Carousel({ items = [] }) {
 				}
 				.hero-overlay.visible { 
 					opacity: 1; 
-					pointer-events: auto; /* <- keep so overlay remains interactive if needed */
+					pointer-events: auto;
 				}
-				/* Title: elegant high-contrast serif similar to the example */
-				.hero-title {
-					/* use a handwritten/script display first, keep Playfair as fallback */
-					font-family: "Dancing Script", "Great Vibes", "Playfair Display", serif;
-					font-size: clamp(34px, 6.0vw, 78px);
-					line-height: 1.02;
-					margin: 6px 0 12px;
-					font-weight: 800;
-					letter-spacing: -0.02em;
-					text-shadow: 0 18px 48px rgba(0,0,0,0.6);
-					transform: translateY(6px);
-					transition: transform 650ms cubic-bezier(.2,.9,.3,1), opacity 600ms;
-					opacity: 0;
-					white-space: normal;       /* ensure wrapping */
-					word-break: break-word;    /* break long words if needed */
-				}
-				.hero-overlay.visible .hero-title { opacity: 1; transform: translateY(0); }
-				/* Subtitle: classic readable serif to pair with Playfair */
-				.hero-sub { 
-					/* apply a lighter script/handwriting feel while keeping Lora as fallback for readability */
-					font-family: "Dancing Script", "Lora", serif;
-					margin: 0 auto 18px;
-					color: rgba(255,255,255,0.92);
-					font-size: clamp(14px, 1.8vw, 18px);
-					letter-spacing: 0.2px;
-					opacity: 0;
-					transform: translateY(6px);
-					transition: transform 700ms 80ms, opacity 700ms 80ms;
-				}
-				.hero-overlay.visible .hero-sub { opacity: 1; transform: translateY(0); }
- 
-				/* optional small script / brand above the title */
-				.hero-brand {
-					font-family: "Great Vibes", cursive;
-					font-size: clamp(16px, 2.6vw, 34px);
-					color: rgba(255,255,255,0.95);
-					opacity: 0.95;
-					margin-bottom: 6px;
-					letter-spacing: 0.6px;
-					text-shadow: 0 6px 18px rgba(0,0,0,0.45);
-				}
- 
-				.hero-cta { display: inline-flex; gap: 12px; margin-top: 12px; opacity: 0; transform: translateY(6px); transition: opacity 800ms 160ms, transform 800ms 160ms; }
-				.hero-overlay.visible .hero-cta { opacity: 1; transform: translateY(0); }
- 
-				.btn-primary { background: linear-gradient(90deg,#ff7a59,#ffbf69); color: #0b1220; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; pointer-events: auto; }
-				.btn-ghost { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.08); padding: 10px 14px; border-radius: 8px; cursor: pointer; pointer-events: auto; }
- 
-				/* responsive */
-				@media (max-width: 900px) {
-					/* larger responsive title/subtitle */
-					.hero-title {
-						font-size: clamp(24px, 7.5vw, 40px);
-						padding: 12px 16px;
-						white-space: normal;
-						word-break: break-word;
-						font-family: "Dancing Script", "Great Vibes", "Playfair Display", serif;
-					}
-					.hero-title br { display: block; line-height: 1.05; } /* if markup includes <br/> it will act as a break */
-					.hero-sub {
-						font-size: 16px;
-						text-align: left;
-						margin-left: 0;
-						font-family: "Dancing Script", "Lora", serif;
-					}
-					.shape-1, .shape-2 { display: none; }
-					/* shift overlay left so user sees text immediately on smaller viewports */
-					.hero-overlay { top: 42%; left: 8%; transform: translate(0, -50%); text-align: left; width: 78%; padding: 0 8px; }
-				}
- 
-				@media (max-width: 760px) {
-					/* slightly larger mobile sizes to improve legibility */
-					.carousel-wrapper,
-					.slide-item {
-						height: 320px !important;
-					}
-					.slide-bg img {
-						width: 120%;
-						height: 120%;
-						transform: translate(-50%, -50%) translate(var(--tx, 0), var(--ty, 0)) scale(1.06);
-					}
-+					/* reduce gradient extent on small screens so it doesn't cover too much */
-+					.slide-bg::before { height: 10%; background: linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0) 100%); }
-					/* keep overlay left-aligned and readable on compact heights */
-					.hero-overlay { top: 40%; left: 6%; transform: translate(0, -50%); text-align: left; width: 84%; padding: 0 10px; z-index: 9; }
-					.hero-title { font-size: clamp(22px, 7.2vw, 36px); }
-					.hero-sub { font-size: 16px; }
-				}
- 
-				@media (max-width: 480px) {
-					/* compact phones — keep text larger for readability */
-					.carousel-wrapper,
-					.slide-item {
-						height: 280px !important;
-					}
-					.shape-1, .shape-2 { display: none; }
- 
-					.hero-overlay {
-						top: 44%;
-						left: 6%;
-						transform: translate(0, -50%);
-						text-align: left;
-						width: 88%;
-						padding: 0 10px;
-						z-index: 10;
-						pointer-events: auto;
-					}
-					.hero-title {
-						font-size: clamp(20px, 8.0vw, 32px);
-						line-height: 1.04;
-						text-shadow: 0 12px 36px rgba(0,0,0,0.55);
-					}
-					.hero-sub {
-						font-size: 15px;
-						color: rgba(255,255,255,0.95);
-						text-align: left;
-						font-family: "Dancing Script", "Lora", serif;
-					}
-					.hero-brand { font-size: clamp(12px, 3.6vw, 20px); }
- 
-					/* ensure prev/next controls sit inside the hero and remain tappable */
-					button[aria-label="Previous slide"],
-					button[aria-label="Next slide"] {
-						top: auto;
-						bottom: 10px;
-						transform: none;
-						width: 40px;
-						height: 40px;
-						opacity: 0.95;
-					}
-					button[aria-label="Previous slide"] { left: 12px; }
-					button[aria-label="Next slide"] { right: 12px; }
-				}
+
+				/* Title: large elegant serif (Playfair) similar to the reference image */
+.hero-title {
+    font-family: "Playfair Display", "Dancing Script", "Great Vibes", serif;
+    font-size: clamp(56px, 10vw, 120px);
+    
+    /* FIX: allow full letters like y/p/g (no clipping) */
+    line-height: 1.12;         
+    overflow: visible;          /* FIX */
+    white-space: normal;        /* FIX */
+    
+    margin: 0 0 12px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+
+    -webkit-text-stroke: 0.6px rgba(0,0,0,0.35);
+    text-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 6px 18px rgba(0,0,0,0.4);
+
+    transform: translateY(6px);
+    transition: transform 520ms cubic-bezier(.2,.9,.3,1), opacity 500ms;
+
+    opacity: 0;
+    color: #fff;
+}
+
+.hero-overlay.visible .hero-title {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Subtitle */
+.hero-sub {
+    font-family: "Lora", serif;
+    display: inline-block;
+    position: relative;
+    margin: 0;
+    color: rgba(255,255,255,0.95);
+    font-size: clamp(14px, 1.8vw, 20px);
+    letter-spacing: 8px;
+    text-transform: uppercase;
+
+    opacity: 0;
+    transform: translateY(6px);
+    transition: transform 520ms 80ms, opacity 520ms 80ms;
+
+    padding: 0 26px;
+}
+
+.hero-sub::before,
+.hero-sub::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 160px;
+    height: 2px;
+    background: rgba(255,255,255,0.7);
+}
+
+.hero-sub::before { left: -190px; }
+.hero-sub::after  { right: -190px; }
+
+.hero-overlay.visible .hero-sub {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Responsive fixes */
+@media (max-width: 900px) {
+    .hero-title {
+        font-size: clamp(36px, 9vw, 76px);
+        line-height: 1.12;     /* FIX descenders */
+    }
+
+    .hero-sub {
+        font-size: clamp(12px, 2.2vw, 16px);
+        letter-spacing: 6px;
+    }
+
+    .hero-sub::before,
+    .hero-sub::after {
+        width: 90px;
+        left: -110px;
+        right: -110px;
+    }
+
+    .hero-overlay {
+        width: 92%;
+        padding: 0 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-title {
+        font-size: clamp(20px, 10vw, 36px);
+        line-height: 1.15;     /* FIX small screen clipping */
+    }
+
+    .hero-sub {
+        font-size: 12px;
+        letter-spacing: 4px;
+        padding: 0 10px;
+    }
+
+    .hero-sub::before,
+    .hero-sub::after {
+        width: 60px;
+        left: -80px;
+        right: -80px;
+    }
+}
+
+				/* ...existing styles below... */
  			`}</style>
 		</div>
 	);
