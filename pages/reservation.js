@@ -395,6 +395,23 @@ export default function ReservationPage() {
     return [adultsPart, childrenPart, special, acPart].filter(Boolean).join(" · ")
   }
 
+  // when clicking Continue in the aside summary
+  const handleAsideContinue = () => {
+    // ensure there's at least one selected room; if none, use selectedRoom as fallback
+    if (selectedRooms.length === 0 && selectedRoom) {
+      setSelectedRooms([{ room: selectedRoom, qty: 1 }])
+    }
+
+    const suitability = multiSuitability(selectedRooms.length ? selectedRooms : (selectedRoom ? [{ room: selectedRoom, qty: 1 }] : []))
+    if (!suitability.ok) {
+      alert(suitability.reason + ". Please add more rooms.")
+      return
+    }
+
+    setStep(2)
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
   return ( 
     <div className="reservation-page">
       {/* Left summary */}
@@ -471,8 +488,18 @@ export default function ReservationPage() {
 
           </div> {/* <-- ensure selected-room is closed BEFORE Continue button */}
 
-          {/* Continue action removed — adding a room now advances to Guest Details automatically */}
- 
+          {/* add Continue button under totals so users can proceed from the aside */}
+          <div style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className="aside-continue"
+              onClick={handleAsideContinue}
+              disabled={!(selectedRooms.length > 0 || selectedRoom)}
+            >
+              Continue
+            </button>
+          </div>
+
         </div> {/* <-- close full-details */}
 
         {/* compact total preview always visible on mobile; click to toggle details */}
@@ -755,9 +782,25 @@ export default function ReservationPage() {
           .aside .total-preview{ display:flex; }
         }
 
-        /* aside continue button style */
-        /* .aside-continue{ width:100%; margin-top:8px; background:#ff7a59; color:#000; border:none; padding:10px 12px; border-radius:8px; font-weight:700; } */
-        /* preview-continue removed to avoid duplicate Continue button in compact preview */
+        /* aside continue button */
+        .aside-continue{
+          width:100%;
+          margin-top:8px;
+          background:#ff7a59;
+          color:#000;
+          border:none;
+          padding:10px 12px;
+          border-radius:8px;
+          font-weight:700;
+          cursor:pointer;
+        }
+        .aside-continue[disabled]{
+          opacity:0.6;
+          cursor:not-allowed;
+        }
+
+        /* ensure compact preview does not duplicate Continue button */
+        .aside .total-preview .aside-continue{ display:none; }
 
         /* Force header/nav to be black on reservation page */
         body.reservation-navbar-black .navbar,
