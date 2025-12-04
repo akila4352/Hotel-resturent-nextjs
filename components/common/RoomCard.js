@@ -89,7 +89,7 @@ export const RoomCard = ({ data }) => {
               lineHeight: '1.6',
               overflowWrap: 'break-word'
             }}>
-              Cum sociis natoque penatibus et magnis dis part urient montes, nascetur ridiculus mus. Vestib ulum id ligula porta felis euis.
+             We offer clean, comfortable rooms with attached bathrooms for all guests. Choose from single, double, or triple room options—all available with or without air conditioning to fit your budget.
             </p>
             
             {/* Features Grid */}

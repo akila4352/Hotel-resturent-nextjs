@@ -228,66 +228,66 @@ export const roomsdata = [
 export const expertise = [
   {
     id: 1,
-    title: "Luxury Room",
-    price: "33.99",
-    cover: "/images/bed1.jpg",
-    coverHover: "/images/bed2.jpg", // <-- updated
-    capacity: "2 Person(s)",
+    title: "Trible room AC",
+    price: "30",
+    cover: "/images/Tribbel2.JPG",
+    coverHover: "/images/Tribbel2.JPG", // <-- updated
+    capacity: "4 Adult & 1 Child",
     size: "30m2 / 323ft2",
-    view: "City View",
-    bed: "Queen / Twin"
+    view: "FREE wifi",
+    bed: "King & Double"
   },{
     id: 2,
-    title: "Luxury Room",
+    title: "Double Room AC",
     price: "33.99",
-    cover: "/images/bed1.jpg",
-    coverHover: "/images/bed2.jpg", // <-- updated
-    capacity: "2 Person(s)",
+    cover: "/images/double13.jpg",
+    coverHover: "/images/double13.jpg", // <-- updated
+    capacity: "2 Adult & 1 Child",
     size: "30m2 / 323ft2",
-    view: "City View",
-    bed: "Queen / Twin"
+    view: "FREE wifi",
+    bed: "King Size"
   },{
     id: 3,
-    title: "Luxury Room",
+    title: "Double Room AC",
     price: "33.99",
-    cover: "/images/bed1.jpg",
-    coverHover: "/images/bed2.jpg", // <-- updated
-    capacity: "2 Person(s)",
+    cover: "/images/double21.jpeg",
+    coverHover: "/images/double21.jpeg", // <-- updated
+    capacity: "2 Adult & 1 Child",
     size: "30m2 / 323ft2",
-    view: "City View",
-    bed: "Queen / Twin"
+    view: "FREE wifi",
+    bed: "King Size"
   },{
     id: 4,
-    title: "Luxury Room",
+    title: "Double Room AC",
     price: "33.99",
-    cover: "/images/bed1.jpg",
-    coverHover: "/images/bed2.jpg", // <-- updated
-    capacity: "2 Person(s)",
+    cover: "/images/double32.jpeg",
+    coverHover: "/images/double32.jpeg", // <-- updated
+    capacity: "2 Adult & 1 Child",
     size: "30m2 / 323ft2",
-    view: "City View",
-    bed: "Queen / Twin"
+    view: "FREE wifi",
+    bed: "King Size"
   },
   {
     id: 5,
-    title: "Luxury Room",
+    title: "Double Room Non-AC",
     price: "33.99",
-    cover: "/images/bed1.jpg",
-    coverHover: "/images/bed2.jpg", // <-- updated
-    capacity: "2 Person(s)",
+    cover: "/images/double41.jpeg",
+    coverHover: "/images/double41.jpeg", // <-- updated
+    capacity: "2 Adult & 1 Child",
     size: "30m2 / 323ft2",
-    view: "City View",
-    bed: "Queen / Twin"
+    view: "FREE wifi",
+    bed: "King Size"
   },
   {
     id: 6,
-    title: "Luxury Room",
+    title: "Single Room Non-AC",
     price: "33.99",
-    cover: "/images/bed1.jpg",
-    coverHover: "/images/bed2.jpg", // <-- updated
-    capacity: "2 Person(s)",
+    cover: "/images/single12.JPG",
+    coverHover: "/images/single12.JPG", // <-- updated
+    capacity: "1 Adult & 1 Child",
     size: "30m2 / 323ft2",
-    view: "City View",
-    bed: "Queen / Twin"
+    view: "FREE wifi",
+    bed: "double"
   },
 
 ]
