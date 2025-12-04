@@ -1,15 +1,17 @@
-
 import Head from "next/head"
+import Blogs from "../sections/Blogs" // add: render the Blogs component
 
-const Blogs = () => {
+const blogs = () => {
   return (
     <>
       <Head>
-        <title>Blog - 7Creative</title>
+        <title>Amore — Contact</title>
       </Head>
-      
+
+      {/* render the Contact/Blogs section so /blogs shows the page */}
+      <Blogs />
     </>
   )
 }
 
-export default Blogs
+export default blogs

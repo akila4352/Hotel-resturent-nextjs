@@ -20,6 +20,211 @@ export const home = [
     title: "Restaurant & Dining",
   },
 ]
+// assets/data/dummydata.js
+
+// Add this to your existing dummydata.js file
+
+export const dishdata = [
+  // BREAKFAST
+  {
+    id: 1,
+    name: "ROAST & VEGETABLES",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "80",
+    oldPrice: "100",
+    category: "BREAKFAST",
+    image: "/images/dish1.jpg",
+    icon: "🍳"
+  },
+  {
+    id: 2,
+    name: "MEAT SOUP",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "62.25",
+    oldPrice: "85",
+    category: "BREAKFAST",
+    image: "/images/dish1.jpg",
+    icon: "🥣"
+  },
+  {
+    id: 3,
+    name: "PANCAKES",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "45",
+    oldPrice: "60",
+    category: "BREAKFAST",
+    image: "/images/dish1.jpg",
+    icon: "🥞"
+  },
+
+  // LUNCH
+  {
+    id: 4,
+    name: "GRILLED CHICKEN",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "120",
+    oldPrice: "150",
+    category: "LUNCH",
+    image: "/images/dish1.jpg",
+    icon: "🍗"
+  },
+  {
+    id: 5,
+    name: "SEAFOOD PASTA",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "95",
+    oldPrice: "110",
+    category: "LUNCH",
+    image: "/images/dish1.jpg",
+    icon: "🍝"
+  },
+  {
+    id: 6,
+    name: "BEEF BURGER",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "75",
+    oldPrice: "90",
+    category: "LUNCH",
+    image: "/images/dish1.jpg",
+    icon: "🍔"
+  },
+
+  // DINNER
+  {
+    id: 7,
+    name: "STEAK & VEGETABLES",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "150",
+    oldPrice: "180",
+    category: "DINNER",
+    image: "/images/dish1.jpg",
+    icon: "🥩"
+  },
+  {
+    id: 8,
+    name: "LOBSTER SPECIAL",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "200",
+    oldPrice: "250",
+    category: "DINNER",
+    image: "/images/dish1.jpg",
+    icon: "🦞"
+  },
+  {
+    id: 9,
+    name: "LAMB CURRY",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "130",
+    oldPrice: "160",
+    category: "DINNER",
+    image: "/images/dish1.jpg",
+    icon: "🍛"
+  },
+
+  // DRINK
+  {
+    id: 10,
+    name: "FRESH JUICE",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "25",
+    oldPrice: "35",
+    category: "DRINK",
+    image: "/images/dish1.jpg",
+    icon: "🍹"
+  },
+  {
+    id: 11,
+    name: "COCKTAILS",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "45",
+    oldPrice: "60",
+    category: "DRINK",
+    image: "/images/dish1.jpg",
+    icon: "🍸"
+  },
+  {
+    id: 12,
+    name: "COFFEE & TEA",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "15",
+    oldPrice: "20",
+    category: "DRINK",
+    image: "/images/dish1.jpg",
+    icon: "☕"
+  }
+]
+// Add this export to your assets/data/dummydata.js
+
+export const roomsdata = [
+  {
+    id: 1,
+    name: "LUXURY ROOM",
+    startingPrice: "START FROM $120 PER DAY",
+    description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
+    image: "/images/bed3.JPG",
+    features: [
+      "King Size Bed",
+      "Air Conditioning",
+      "42-inch Flat Screen TV",
+      "Free Wi-Fi",
+      "Private Balcony",
+      "Luxury Bathroom",
+      "Mini Bar",
+      "24-hour Room Service"
+    ]
+  },
+  {
+    id: 2,
+    name: "FAMILY ROOM",
+    startingPrice: "START FROM $150 PER DAY",
+    description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
+    image: "/images/bed3.JPG",
+    features: [
+      "Two Queen Size Beds",
+      "Spacious Living Area",
+      "Air Conditioning",
+      "Full Kitchen Facilities",
+      "2 Bathrooms",
+      "Free Wi-Fi",
+      "Flat Screen TV",
+      "Separate Dining Area"
+    ]
+  },
+  {
+    id: 3,
+    name: "STANDARD ROOM",
+    startingPrice: "START FROM $80 PER DAY",
+    description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
+    image: "/images/bed3.JPG",
+    features: [
+      "Double Bed",
+      "Air Conditioning",
+      "32-inch Flat Screen TV",
+      "Free Wi-Fi",
+      "Private Bathroom",
+      "Work Desk",
+      "In-room Safe",
+      "Daily Housekeeping"
+    ]
+  },
+  {
+    id: 4,
+    name: "COUPLE ROOM",
+    startingPrice: "START FROM $100 PER DAY",
+    description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
+    image: "/images/bed3.JPG",
+    features: [
+      "Double Bed",
+      "Air Conditioning",
+      "Jacuzzi Tub",
+      "Free Wi-Fi",
+      "Rain Shower",
+      "Premium Toiletries",
+      "Mood Lighting",
+      "Romantic Ambiance"
+    ]
+  }
+]
 export const expertise = [
   {
     id: 1,

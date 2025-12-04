@@ -56,8 +56,8 @@ const Header = () => {
                <Image
                  src="/images/logo1.png"
                  alt="AMORE logo"
-                 width={260}
-                 height={60}
+                 width={200}  // reduced logo width
+                 height={48}  // reduced logo height
                  priority
                  style={{
                    objectFit: "contain",
@@ -72,10 +72,10 @@ const Header = () => {
              <Link href='/' className={activeLink == "/" ? "activeLink" : "none"}>
                Home
              </Link>
-             <Link href='/rooms' className={activeLink == "/rooms" ? "activeLink" : "none"}>
+             <Link href='/rooms2' className={activeLink == "/rooms2" ? "activeLink" : "none"}>
                ROOMS
              </Link>
-             <Link href='/resturant' className={activeLink == "/resturant" ? "activeLink" : "none"}>
+             <Link href='/restaurant2' className={activeLink == "/restaurant2" ? "activeLink" : "none"}>
                RESTURANT
              </Link>
          
@@ -83,7 +83,7 @@ const Header = () => {
                NEAR BY PLACES
              </Link>
              <Link href='/blogs' className={activeLink == "/blogs" ? "activeLink" : "none"}>
-               BLOG
+               Contact
              </Link>
          
             
