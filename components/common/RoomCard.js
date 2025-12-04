@@ -14,8 +14,7 @@ export const RoomCard = ({ data }) => {
         borderRadius: '8px',
         cursor: 'pointer',
         height: '320px',      // reduced height (slimmer card)
-        minWidth: '380px',    // allow card to be wider on larger screens
-        width: '100%',        // responsive width within parent
+        // width: '100%',        // responsive width within parent
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -172,6 +171,16 @@ export const RoomCard = ({ data }) => {
           </p>
         </div>
       )}
+      
+      <style jsx>{`
+        /* card should fill the grid cell provided by parent container */
+        .room-card {
+          display: block;
+          width: 100%;
+          margin: 0;
+          box-sizing: border-box;
+        }
+      `}</style>
     </div>
   )
 }
