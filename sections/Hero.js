@@ -15,6 +15,7 @@ import { useRouter } from "next/router"
 import { rtdb } from "@/lib/firebase"
 import { ref as dbRef, push } from "firebase/database"
 import BookingBox from "@/components/BookingBox"
+import AboutUs from "@/components/AboutUs"
 
 const Hero = () => {
   const router = useRouter() 
@@ -201,6 +202,7 @@ const Hero = () => {
       </section>
 
       <Expertise />
+      <AboutUs />
       <Testimonial />
       <ShowCase />
 
