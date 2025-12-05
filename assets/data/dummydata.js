@@ -153,21 +153,30 @@ export const dishdata = [
     icon: "☕"
   }
 ]
-// Add this export to your assets/data/dummydata.js
+// assets/data/dummydata.js
+
+// Add this export to your existing dummydata.js
 
 export const roomsdata = [
   {
     id: 1,
-    name: "LUXURY ROOM",
-    startingPrice: "START FROM $120 PER DAY",
+    name: "Triple Room AC",
+    startingPrice: "START FROM $30 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
     image: "/images/bed3.JPG",
+    gallery: [
+      "/images/Tribbel1.JPG",
+      "/images/Tribbel2.JPG",
+      "/images/Tribbel3.JPG",
+      "/images/Tribbel4.JPG",
+      "/images/Tribbeltoilet.JPG"
+     
+    ],
     features: [
-      "King Size Bed",
+      "King Size Bed & double Bed",
       "Air Conditioning",
       "42-inch Flat Screen TV",
       "Free Wi-Fi",
-      "Private Balcony",
       "Luxury Bathroom",
       "Mini Bar",
       "24-hour Room Service"
@@ -175,16 +184,22 @@ export const roomsdata = [
   },
   {
     id: 2,
-    name: "FAMILY ROOM",
-    startingPrice: "START FROM $150 PER DAY",
+    name: "Double Room AC",
+    startingPrice: "START FROM $20 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
-    image: "/images/bed3.JPG",
+    image: "/images/bed2.jpg",
+    gallery: [
+      "/images/double11.jpg",
+      "/images/double12.jpeg",
+      "/images/double13.jpg",
+      "/images/double14.jpg",  
+      "/images/double15.jpeg"
+    ],
     features: [
-      "Two Queen Size Beds",
+      "one Queen Size Bed",
       "Spacious Living Area",
       "Air Conditioning",
-      "Full Kitchen Facilities",
-      "2 Bathrooms",
+      "1 Bathrooms",
       "Free Wi-Fi",
       "Flat Screen TV",
       "Separate Dining Area"
@@ -192,10 +207,16 @@ export const roomsdata = [
   },
   {
     id: 3,
-    name: "STANDARD ROOM",
-    startingPrice: "START FROM $80 PER DAY",
+    name: "Double ROOM",
+    startingPrice: "START FROM $20 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
-    image: "/images/bed3.JPG",
+    image: "/images/double21.jpeg",
+    gallery: [
+      "/images/double22.jpeg",
+      "/images/double23.jpeg",
+      "/images/double24.jpeg",
+      "/images/double25.jpeg"
+    ],
     features: [
       "Double Bed",
       "Air Conditioning",
@@ -203,16 +224,65 @@ export const roomsdata = [
       "Free Wi-Fi",
       "Private Bathroom",
       "Work Desk",
-      "In-room Safe",
       "Daily Housekeeping"
     ]
   },
   {
     id: 4,
-    name: "COUPLE ROOM",
-    startingPrice: "START FROM $100 PER DAY",
+    name: "Double Room AC",
+    startingPrice: "START FROM $20 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
-    image: "/images/bed3.JPG",
+    image: "/images/double32.jpeg",
+    gallery: [
+      "/images/double31.jpeg",
+      "/images/double33.jpeg",
+      "/images/double34.jpeg"
+    ],
+    features: [
+      "Double Bed",
+      "Air Conditioning",
+      "Jacuzzi Tub",
+      "Free Wi-Fi",
+      "Rain Shower",
+      "Premium Toiletries",
+      "Mood Lighting",
+      "Romantic Ambiance"
+    ]
+  },{
+    id: 4,
+    name: "Double Room Non AC",
+    startingPrice: "START FROM $10 PER DAY",
+    description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
+    image:  "/images/double42.jpeg",
+    gallery: [
+      "/images/double41.jpeg",
+      "/images/double42.jpeg",
+      
+    ],
+    features: [
+      "Double Bed",
+      "Air Conditioning",
+      "Jacuzzi Tub",
+      "Free Wi-Fi",
+      "Rain Shower",
+      "Premium Toiletries",
+      "Mood Lighting",
+      "Romantic Ambiance"
+    ]
+  },
+  {
+    id: 4,
+    name: "Single Room Non AC",
+    startingPrice: "START FROM $10 PER DAY",
+    description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
+    image:  "/images/single11.JPG",
+    gallery: [
+      "/images/single12.JPG",
+      "/images/single13.JPG",
+      "/images/single14.JPG",
+      "/images/singletoilet.JPG"
+      
+    ],
     features: [
       "Double Bed",
       "Air Conditioning",
