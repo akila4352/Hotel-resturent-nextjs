@@ -457,7 +457,7 @@ export default function Carousel({ items = [] }) {
 				/* Title: large elegant serif (Playfair) similar to the reference image */
 .hero-title {
     font-family: "Playfair Display", "Dancing Script", "Great Vibes", serif;
-    font-size: clamp(56px, 10vw, 120px);
+    font-size: clamp(56px, 10vw, 80px);
     
     /* FIX: allow full letters like y/p/g (no clipping) */
     line-height: 1.12;         
