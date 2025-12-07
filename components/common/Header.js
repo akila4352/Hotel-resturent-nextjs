@@ -93,8 +93,53 @@ const Header = () => {
           </button>
           </div>
        </header>
-     </>
-   )
- }
- 
- export default Header
+
+      {/* 3D text effect styles for navigation links */}
+      <style jsx>{`
+        :global(header nav a) {
+          text-shadow: 
+            1px 1px 0 rgba(0,0,0,0.15),
+            2px 2px 0 rgba(0,0,0,0.12),
+            3px 3px 0 rgba(0,0,0,0.1),
+            4px 4px 5px rgba(0,0,0,0.2),
+            0 5px 15px rgba(0,0,0,0.25);
+          font-weight: 600;
+          transition: all 0.3s ease;
+        }
+
+        :global(header nav a:hover),
+        :global(header nav a.activeLink) {
+          text-shadow: 
+            1px 1px 0 rgba(0,0,0,0.2),
+            2px 2px 0 rgba(0,0,0,0.18),
+            3px 3px 0 rgba(0,0,0,0.15),
+            4px 4px 0 rgba(0,0,0,0.12),
+            5px 5px 8px rgba(0,0,0,0.25),
+            0 6px 20px rgba(0,0,0,0.3);
+          transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+          :global(header nav a) {
+            text-shadow: 
+              1px 1px 0 rgba(0,0,0,0.12),
+              2px 2px 0 rgba(0,0,0,0.1),
+              3px 3px 5px rgba(0,0,0,0.18),
+              0 4px 12px rgba(0,0,0,0.2);
+          }
+
+          :global(header nav a:hover),
+          :global(header nav a.activeLink) {
+            text-shadow: 
+              1px 1px 0 rgba(0,0,0,0.15),
+              2px 2px 0 rgba(0,0,0,0.12),
+              3px 3px 6px rgba(0,0,0,0.2),
+              0 5px 15px rgba(0,0,0,0.25);
+          }
+        }
+      `}</style>
+    </>
+  )
+}
+
+export default Header

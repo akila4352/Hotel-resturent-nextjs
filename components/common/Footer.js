@@ -1,36 +1,33 @@
 // components/Footer.jsx
 import Link from "next/link"
-import { TitleLogo } from "./Title"
+import Image from "next/image"
+import footerLogo from "../../public/images/footer-logo.png"
 import { BsFacebook } from "react-icons/bs"
 import { AiFillInstagram } from "react-icons/ai"
 import { FaAirbnb, FaTripadvisor } from "react-icons/fa"
-
+import { FaXTwitter } from "react-icons/fa6"
 
 const Footer = () => {
   return (
     <>
-      {/* Google Map Section (reduced height, responsive) */}
+      {/* Google Map Section */}
       <section className="map-section1">
         {(() => {
-          // exact hotel coordinates
           const lat = 6.292282008549159;
           const lng = 80.04071460920905;
           const placeQuery = encodeURIComponent("Amore 392 Galle Rd Balapitiya");
           const apiKey = process?.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-          const placeId = process?.env?.NEXT_PUBLIC_GOOGLE_MAPS_PLACE_ID || ""; // optional
+          const placeId = process?.env?.NEXT_PUBLIC_GOOGLE_MAPS_PLACE_ID || "";
 
-          // Prefer Place mode with place_id if available, otherwise use place name with API key.
           let src = "";
           if (apiKey && placeId) {
             src = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=place_id:${placeId}`;
           } else if (apiKey) {
             src = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${placeQuery}`;
           } else {
-            // fallback: center map on exact lat/lng and add a marker via query (no API key)
             src = `https://www.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
           }
 
-          // build directions URL (opens Google Maps directions to the hotel)
           const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 
           return (
@@ -46,7 +43,6 @@ const Footer = () => {
                 title="Hotel Amore Location - Balapitiya"
               ></iframe>
 
-              {/* Custom overlay place card to show name/address/rating and a Directions button */}
               <div className="place-card" aria-hidden>
                 <div className="place-left">
                   <strong className="place-name">Amore</strong>
@@ -77,11 +73,10 @@ const Footer = () => {
       <style jsx>{`
         .map-section1 {
           width: 100%;
-          height: 240px; /* reduced default height */
+          height: 240px;
           position: relative;
           margin-bottom: 0;
         }
-        /* place card overlay */
         .place-card {
           position: absolute;
           left: 12px;
@@ -105,7 +100,6 @@ const Footer = () => {
         .score { color:#111; font-weight:700; margin-right:4px; }
         .stars { font-size:12px; letter-spacing:1px; color:#d4af37; }
         .reviews { color:#1a73e8; text-decoration:none; font-size:12px; display:block; margin-top:4px; }
-        /* add styles for the directions button inside the same <style jsx> block already in the file */
         .directions-btn {
           display: inline-block;
           margin-top: 8px;
@@ -130,82 +124,260 @@ const Footer = () => {
         }
       `}</style>
 
-      <footer>
-        <div className='container'>
-          <div className='grid-4'>
-            <div className='logo'>
-              <TitleLogo title='AMORE' className='logobg' />
-              <br />
-              <span>
-                Questions? Reach us <br /> Monday – Friday from 9 am to 6 pm
-              </span>
-              <br />
-              <br />
-              <h3>0725845841</h3>
-              <br />
-              <button className='button-primary'>Request For Quote</button>
-            </div>
-            <ul>
-              <h3>COMPANY</h3>
-              <li>
-                <Link href='/about'>About</Link>
-              </li>
-              <li>
-                <Link href='/contact'>Contact</Link>
-              </li>
-            </ul>
-            <ul>
-              <h3>SERVICES</h3>
-              <li>
-                <Link href='/hotel'>Hotel</Link>
-              </li>
-              <li>
-                <Link href='/restaurants'>Resturens</Link>
-              </li>
-              <li>
-                <Link href='/travel-guide'>Travel Guid</Link>
-              </li>
-            </ul>
-            <ul>
-              <h3>CONNECT</h3>
-              <div className='connect'>
-                <li>
-                  <Link href='https://facebook.com' target='_blank'>
-                    <BsFacebook size={25} />
-                  </Link>
-                </li>
-                <li>
-                  <Link href='https://tripadvisor.com' target='_blank'>
-                    <FaTripadvisor size={25} />
-                  </Link>
-                </li>
-                <li>
-                  <Link href='https://instagram.com' target='_blank'>
-                    <AiFillInstagram size={25} />
-                  </Link>
-                </li>
-                <li>
-                  <Link href='https://airbnb.com' target='_blank'>
-                    <FaAirbnb size={25} />
-                  </Link>
-                </li>
-              </div>
-            </ul>
+      {/* Newsletter Section */}
+      <section className="newsletter-section">
+        <div className="newsletter-container">
+          <div className="newsletter-icon">
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="M2 7l10 7 10-7" />
+            </svg>
           </div>
-          <div className='legal connect py'>
-            <div className='text'>
-              <span>© 2025 THE SEVEN. ALL RIGHTS RESERVED.</span>
-            </div>
-            <div className='connect'>
-              <span>DEVELOP BY</span>
-              <span> &nbsp; | &nbsp; </span>
-              <span>AKILA NIRMAL</span>
-            </div>
+          
+          <form className="newsletter-form">
+            <input 
+              type="email" 
+              placeholder="Your email address" 
+              className="newsletter-input"
+              required
+            />
+            <button type="submit" className="newsletter-submit">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+              </svg>
+            </button>
+          </form>
+
+          <div className="social-icons">
+            <Link href='https://twitter.com' target='_blank' className="social-link">
+              <FaXTwitter size={20} />
+            </Link>
+            <Link href='https://facebook.com' target='_blank' className="social-link">
+              <BsFacebook size={20} />
+            </Link>
+            <Link href='https://tripadvisor.com' target='_blank' className="social-link">
+              <FaTripadvisor size={20} />
+            </Link>
+            <Link href='https://instagram.com' target='_blank' className="social-link">
+              <AiFillInstagram size={20} />
+            </Link>
           </div>
+        </div>
+      </section>
+
+      <style jsx>{`
+        .newsletter-section {
+          background: #3a3a3a;
+          padding: 50px 20px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .newsletter-container {
+          max-width: 800px;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 40px;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        .newsletter-icon {
+          color: #c9a961;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 80px;
+          height: 80px;
+          border: 2px solid #c9a961;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .newsletter-form {
+          position: relative;
+          flex: 1;
+          min-width: 300px;
+          max-width: 500px;
+        }
+
+        .newsletter-input {
+          width: 100%;
+          padding: 15px 60px 15px 20px;
+          background: #4a4a4a;
+          border: 1px solid #5a5a5a;
+          border-radius: 4px;
+          color: #fff;
+          font-size: 15px;
+          outline: none;
+          transition: all 0.3s ease;
+        }
+
+        .newsletter-input::placeholder {
+          color: #999;
+        }
+
+        .newsletter-input:focus {
+          border-color: #c9a961;
+          background: #4f4f4f;
+        }
+
+        .newsletter-submit {
+          position: absolute;
+          right: 5px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: #c9a961;
+          border: none;
+          width: 45px;
+          height: 45px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: background 0.3s ease;
+          color: #2a2a2a;
+        }
+
+        .newsletter-submit:hover {
+          background: #d4b872;
+        }
+
+        .social-icons {
+          display: flex;
+          gap: 20px;
+          align-items: center;
+        }
+
+        .social-link {
+          color: #fff;
+          transition: color 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .social-link:hover {
+          color: #c9a961;
+        }
+
+        @media (max-width: 768px) {
+          .newsletter-container {
+            gap: 30px;
+          }
+          
+          .newsletter-icon {
+            width: 60px;
+            height: 60px;
+          }
+
+          .newsletter-form {
+            min-width: 250px;
+          }
+        }
+      `}</style>
+
+      {/* Main Footer */}
+      <footer className="main-footer">
+        <div className='footer-content'>
+          <div className='footer-logo-section'>
+            <Image
+              src={footerLogo}
+              alt="Amore logo"
+              width={200}
+              height={120}
+              priority
+            />
+          </div>
+          
+          <div className='footer-links'>
+            <Link href='/hotel-policies' className='footer-link'>Hotel Policies</Link>
+            <Link href='/contact' className='footer-link'>Contact Us</Link>
+          </div>
+
+          <button className='scroll-top' onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+            </svg>
+          </button>
         </div>
       </footer>
 
-    
+      <style jsx>{`
+        .main-footer {
+          background: #2a2a2a;
+          padding: 60px 20px;
+          display: flex;
+          justify-content: center;
+        }
+
+        .footer-content {
+          max-width: 1200px;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 40px;
+        }
+
+        .footer-logo-section {
+          display: flex;
+          justify-content: center;
+        }
+
+        .footer-links {
+          display: flex;
+          gap: 60px;
+          align-items: center;
+        }
+
+        .footer-link {
+          color: #fff;
+          text-decoration: none;
+          font-size: 16px;
+          font-weight: 300;
+          letter-spacing: 0.5px;
+          transition: color 0.3s ease;
+        }
+
+        .footer-link:hover {
+          color: #c9a961;
+        }
+
+        .scroll-top {
+          background: transparent;
+          border: 2px solid #c9a961;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          color: #c9a961;
+        }
+
+        .scroll-top:hover {
+          background: #c9a961;
+          color: #2a2a2a;
+          transform: translateY(-5px);
+        }
+
+        @media (max-width: 768px) {
+          .footer-links {
+            flex-direction: column;
+            gap: 20px;
+          }
+
+          .footer-content {
+            gap: 30px;
+          }
+        }
+      `}</style>
     </>
   )
 }

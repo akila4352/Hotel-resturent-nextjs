@@ -74,21 +74,22 @@ const Blogs = () => {
             display: 'inline-block',
             marginBottom: '30px'
           }}>
-            <h1 style={{
-              fontSize: '90px', // reduced from 150px
-              fontWeight: '900',
-              margin: '0',
-              letterSpacing: '10px',
-              textTransform: 'uppercase',
-              lineHeight: '1',
-              // transparent fill with white outline
-              color: 'transparent',
-              WebkitTextFillColor: 'transparent',
-              WebkitTextStroke: '3px white', // primary outline
-              textStroke: '3px white', // non-standard fallback
-              // remove shadow so the stroke is clean
-              textShadow: 'none'
-            }}>
+            <h1
+              className="title-underline"
+              style={{
+                fontSize: '90px', // reduced from 150px
+                fontWeight: '900',
+                margin: '0',
+                letterSpacing: '10px',
+                textTransform: 'uppercase',
+                lineHeight: '1',
+                color: 'transparent',
+                WebkitTextFillColor: 'transparent',
+                WebkitTextStroke: '3px white',
+                textStroke: '3px white',
+                textShadow: 'none'
+              }}
+            >
                AMORE Hotel
             </h1>
           </div>

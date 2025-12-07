@@ -15,12 +15,6 @@ const AboutUs = () => {
           {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <Title title='About Us' />
-            <div style={{
-              width: '60px',
-              height: '3px',
-              background: '#d4af37',
-              margin: '10px auto 0'
-            }}></div>
           </div>
 
           {/* Content */}

@@ -61,13 +61,16 @@ const Rooms = () => {
           background: 'rgba(0, 0, 0, 0.5)'
         }}></div>
         <div style={{ position: 'relative', zIndex: 1, padding: '0 20px' }}>
-          <h1 style={{
-            fontSize: '3rem',
-            fontWeight: 'bold',
-            marginBottom: '1rem',
-            textTransform: 'uppercase',
-            letterSpacing: '3px'
-          }}>
+          <h1
+            className="title-underline"
+            style={{
+              fontSize: '3rem',
+              fontWeight: 'bold',
+              marginBottom: '1rem',
+              textTransform: 'uppercase',
+              letterSpacing: '3px'
+            }}
+          >
             ROOMS & RATES
           </h1>
           <p style={{
