@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import Image from "next/image"
 import { roomsdata } from "@/assets/data/dummydata"
+import Head from "next/head"
 
 const Rooms = () => {
   const [selectedImages, setSelectedImages] = useState({})
@@ -38,52 +39,13 @@ const Rooms = () => {
 
   return (
     <>
-      {/* Hero Section */}
-      <section style={{
-        position: 'relative',
-        height: '300px',
-        backgroundImage: "url('/images/b1.jpg')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        textAlign: 'center'
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)'
-        }}></div>
-        <div style={{ position: 'relative', zIndex: 1, padding: '0 20px' }}>
-          <h1
-            className="title-underline"
-            style={{
-              fontSize: '3rem',
-              fontWeight: 'bold',
-              marginBottom: '1rem',
-              textTransform: 'uppercase',
-              letterSpacing: '3px'
-            }}
-          >
-            ROOMS & RATES
-          </h1>
-          <p style={{
-            fontSize: '1.1rem',
-            maxWidth: '800px',
-            margin: '0 auto',
-            lineHeight: '1.6'
-          }}>
-            Our living spaces are about more than just accommodating gorgeous surroundings and modern conveniences.
-          </p>
-        </div>
-      </section>
-
+      {/* Import Playfair Display font */}
+      <Head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap"
+          rel="stylesheet"
+        />
+      </Head>
       {/* Rooms Section */}
       <section style={{ padding: '60px 0', background: 'white' }}>
         <div className='container'>
@@ -102,7 +64,7 @@ const Rooms = () => {
                   alignItems: 'center',
                   marginBottom: '80px'
                 }}
-                className="room-row"
+                className="room-row playfair"
               >
                 {/* Image Section */}
                 <div style={{
@@ -177,7 +139,7 @@ const Rooms = () => {
                   order: index % 2 === 0 ? 2 : 1,
                   padding: '0 20px'
                 }}>
-                  <p style={{
+                  <p className="playfair" style={{
                     fontSize: '0.85rem',
                     color: '#999',
                     textTransform: 'uppercase',
@@ -187,7 +149,7 @@ const Rooms = () => {
                   }}>
                     {room.startingPrice}
                   </p>
-                  <h2 style={{
+                  <h2 className="playfair three-d-text" style={{
                     fontSize: '2.2rem',
                     fontWeight: 'bold',
                     marginBottom: '20px',
@@ -195,9 +157,9 @@ const Rooms = () => {
                     color: '#333',
                     letterSpacing: '1px'
                   }}>
-                    {room.name}
+                    ROOM-{room.id}. {room.name}
                   </h2>
-                  <p style={{
+                  <p className="playfair" style={{
                     fontSize: '1rem',
                     color: '#666',
                     lineHeight: '1.8',
@@ -210,7 +172,7 @@ const Rooms = () => {
                   <div style={{
                     marginBottom: '30px'
                   }}>
-                    <p style={{
+                    <p className="playfair" style={{
                       fontSize: '0.9rem',
                       fontWeight: '600',
                       color: '#333',
@@ -225,7 +187,7 @@ const Rooms = () => {
                       margin: 0
                     }}>
                       {room.features.map((feature, idx) => (
-                        <li key={idx} style={{
+                        <li key={idx} className="playfair" style={{
                           fontSize: '0.95rem',
                           color: '#666',
                           marginBottom: '8px',
@@ -244,7 +206,7 @@ const Rooms = () => {
                   </div>
 
                   {/* View Details Button */}
-                  <button style={{
+                  <button className="playfair" style={{
                     padding: '12px 30px',
                     background: '#8b7355',
                     color: 'white',
@@ -269,8 +231,20 @@ const Rooms = () => {
         </div>
       </section>
 
-      {/* CSS Animations */}
+      {/* CSS Animations and Playfair font class */}
       <style jsx>{`
+        .playfair {
+          font-family: 'Playfair Display', serif !important;
+        }
+        .three-d-text {
+          color: #333;
+          text-shadow:
+            1px 1px 0 #d4af37,
+            2px 2px 0 #8b7355,
+            3px 3px 6px #999,
+            0 0 10px #fff;
+          letter-spacing: 2px;
+        }
         @keyframes fadeInScale {
           0% {
             opacity: 0;

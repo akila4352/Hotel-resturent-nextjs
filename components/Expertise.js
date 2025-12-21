@@ -4,7 +4,7 @@ import { expertise } from "@/assets/data/dummydata"
 import { RoomCard } from "./common/RoomCard"
 
 const Expertise = () => {
-  return (
+  return ( 
     <>
       <section className='expertise'>
         <div className='container'>

@@ -76,15 +76,6 @@ export const Card = ({ data = {}, caption, show, path }) => {
 					)}
 					{/* --- END NEW --- */}
 
-					{caption && (
-						<Link href={href}>
-							{caption} <HiOutlineArrowRight className='link-icon' />
-						</Link>
-					)}
-					<div className='flex'>
-						<span>{category}</span> {date && <span> / {date}</span>}
-					</div>
-
 					{show && desc.length > 0 && (
 						<ul>
 							{desc.map((text, i) => (

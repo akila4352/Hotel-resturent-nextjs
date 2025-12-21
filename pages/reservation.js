@@ -3,16 +3,15 @@ import { useRouter } from "next/router"
 import { parseISO, format, differenceInDays } from "date-fns"
 import { rtdb } from "../lib/firebase"
 import { ref as dbRef, push } from "firebase/database"
-import { rooms as roomOptions } from "@/sections/Rooms" // <-- use shared rooms
+import { rooms as roomOptions } from "@/sections/Rooms"
+import ProgressBar from "../components/ProgressBar"
 
 export default function ReservationPage() {
   const router = useRouter()
   const { checkIn, checkOut, adults = "1", children = "0", rooms = "1", roomType: qRoomType } = router.query
 
-  // compute a normalized roomType from query (lowercase)
   const queryRoomType = qRoomType ? String(qRoomType).toLowerCase() : ""
 
-  // parse dates safely
   const [ci, setCi] = useState(null)
   const [co, setCo] = useState(null)
   useEffect(() => { 
@@ -31,22 +30,15 @@ export default function ReservationPage() {
  
   const totalGuests = Number(adults || 0) + Number(children || 0)
 
-  // per-room-type maximum limits
   const maxRoomsByType = { triple: 1, double: 4, single: 1 }
   const getTypeKey = (r) => (r?.type || "").toString().toLowerCase()
   const countByType = (type, list = selectedRooms) =>
     list.reduce((s, sr) => (getTypeKey(sr.room) === type ? s + sr.qty : s), 0)
 
-  // inline limit message for room-type caps
   const [typeLimitMessage, setTypeLimitMessage] = useState(null)
-
-  // UI state
-  const [step, setStep] = useState(1) // 1 = choose room, 2 = guest details
-  // single selectedRoom kept for compatibility with some UI, but main selection is selectedRooms
+  const [step, setStep] = useState(1)
   const [selectedRoom, setSelectedRoom] = useState(roomOptions[0] || null)
-  // support multiple room selections: { room, qty }
   const [selectedRooms, setSelectedRooms] = useState(() => {
-    // preselect from query.room if present
     const qRoom = router.query?.room
     if (qRoom) {
       const found = roomOptions.find((rr) => String(rr.id) === String(qRoom))
@@ -57,7 +49,6 @@ export default function ReservationPage() {
   const [submitting, setSubmitting] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // form state used in Guest Details — initialize to avoid ReferenceError
   const [form, setForm] = useState({
     country: "",
     mobile: "",
@@ -70,27 +61,11 @@ export default function ReservationPage() {
     agree: false,
   })
 
-  // helpers to manage selectedRooms
+  const [breakfastType, setBreakfastType] = useState("") // Breakfast type
+  const breakfastPrices = { sriLanka: 3.32, continental: 4.20 }; // Prices per person
+
   const isRoomSelected = (r) => selectedRooms.some((sr) => String(sr.room.id) === String(r.id))
-  const setRoomQty = (roomId, qty) => {
-    setSelectedRooms((prev) => {
-      const next = prev.map((sr) => {
-        if (String(sr.room.id) !== String(roomId)) return sr
-        const typeKey = getTypeKey(sr.room)
-        const max = maxRoomsByType[typeKey]
-        const others = countByType(typeKey, prev.filter((p) => String(p.room.id) !== String(roomId)))
-        const desired = Math.max(1, qty)
-        const capped = typeof max === "number" ? Math.min(desired, Math.max(0, max - others)) : desired
-        if (desired !== capped) {
-          setTypeLimitMessage({ type: typeKey, msg: `Sorry, we have only ${max} ${typeKey} room${max > 1 ? "s" : ""}.` })
-        } else {
-          setTypeLimitMessage((m) => (m && m.type === typeKey ? null : m))
-        }
-        return capped > 0 ? { ...sr, qty: capped } : sr
-      })
-      return next.filter((sr) => sr.qty > 0)
-    })
-  }
+  
   const addRoom = (r) => {
     const typeKey = getTypeKey(r)
     const max = maxRoomsByType[typeKey]
@@ -106,19 +81,18 @@ export default function ReservationPage() {
       return [...prev, { room: r, qty: 1 }]
     })
     setSelectedRoom(r)
-    // removed auto-advance; only the Continue button should proceed
   }
 
   const removeRoom = (r) => {
     setSelectedRooms((prev) => prev.filter((sr) => String(sr.room.id) !== String(r.id)))
   }
   
-  // combined capacity checks (only enforce maximum capacities)
   const combinedCapacity = (roomsList = selectedRooms) => {
     const totalAdultCap = roomsList.reduce((s, sr) => s + ((sr.room.maxAdults ?? 2) * sr.qty), 0)
     const totalChildCap = roomsList.reduce((s, sr) => s + ((sr.room.maxChildren ?? 1) * sr.qty), 0)
     return { totalAdultCap, totalChildCap }
   }
+  
   const multiSuitability = (roomsList = selectedRooms) => {
     const { totalAdultCap, totalChildCap } = combinedCapacity(roomsList)
     if (Number(adults || 0) > totalAdultCap) return { ok: false, reason: `Selected rooms capacity only ${totalAdultCap} adults` }
@@ -126,7 +100,6 @@ export default function ReservationPage() {
     return { ok: true, reason: "" }
   }
 
-  // if query.room or query.roomType present, try to pre-select that room; otherwise keep default
   useEffect(() => {
     const qRoom = router.query?.room
     const qType = router.query?.roomType ? String(router.query.roomType).toLowerCase() : null
@@ -139,48 +112,19 @@ export default function ReservationPage() {
       }
     }
 
-    // if roomType provided, try to select the first room matching that type
     if (qType) {
       const foundByType = roomOptions.find((rr) => String(rr.type).toLowerCase() === qType)
       if (foundByType) {
         setSelectedRoom(foundByType)
-        // set selectedRooms to include that room as default
         setSelectedRooms([{ room: foundByType, qty: 1 }])
         return
       }
     }
 
     setSelectedRoom((prev) => prev || roomOptions[0] || null)
-  }, [router.query?.room, router.query?.roomType]) // re-run when query changes
+  }, [router.query?.room, router.query?.roomType])
 
-  // only show rooms matching the selected query roomType (if provided)
   const visibleRooms = (queryRoomType ? roomOptions.filter((r) => String(r.type).toLowerCase() === queryRoomType) : roomOptions)
-
-  // numeric guest counts used in several places
-  const numAdults = Number(adults || 0)
-  const numChildren = Number(children || 0)
-  
-  // returns { ok, reason } for a room vs current guest counts
-  // NOTE: only enforce maximum capacities (adults and children) per user request
-  const roomSuitability = (r) => {
-    if (!r) return { ok: false, reason: "No room selected" }
-    if (numAdults > (r.maxAdults ?? 2)) return { ok: false, reason: `Allows up to ${r.maxAdults} adult(s).` }
-    if (numChildren > (r.maxChildren ?? 1)) return { ok: false, reason: `Allows up to ${r.maxChildren} child(ren).` }
-    return { ok: true, reason: "" }
-  }
-
-  // when user clicks "Continue" for a room we ensure it's included then proceed
-  const onSelectRoom = (room) => {
-    if (!isRoomSelected(room)) addRoom(room)
-    // only proceed if combined capacity is enough
-    const suitability = multiSuitability()
-    if (!suitability.ok) {
-      alert(suitability.reason)
-      return
-    }
-    setStep(2)
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
-  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -192,10 +136,6 @@ export default function ReservationPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // basic validation before attempting to save
-    const numAdults = Number(adults || 0)
-    const numChildren = Number(children || 0)
-
     if (!selectedRoom) {
       alert("Please select a room before booking.")
       return
@@ -206,14 +146,12 @@ export default function ReservationPage() {
       return
     }
 
-    // for multi-room flow: verify combined capacity satisfies guests (only maximums)
     const suitability = multiSuitability()
     if (!suitability.ok) {
       alert(suitability.reason + ". Please add more rooms.")
       return
     }
 
-    // all validation passed — proceed to save
     setSubmitting(true)
     try {
       const payload = {
@@ -224,7 +162,6 @@ export default function ReservationPage() {
         children: Number(children || 0),
         rooms: Number(rooms || 0),
         totalGuests,
-        // include all selected room types and quantities
         selectedRooms: selectedRooms.length
           ? selectedRooms.map((sr) => ({ id: sr.room.id, title: sr.room.title, price: sr.room.price || 0, qty: sr.qty }))
           : selectedRoom
@@ -244,11 +181,8 @@ export default function ReservationPage() {
         timestamp: Date.now(),
       }
 
-      // push to Realtime DB under 'reservations'
       await push(dbRef(rtdb, "reservations"), payload)
 
-      // --- Attempt to push the booking as an ICS event to the remote calendar (Booking.com) ---
-      // Build a minimal ICS representing the reserved date range (DTSTART inclusive, DTEND exclusive)
       const buildIcsForReservation = (guest, startDateIso, endDateIso) => {
         const formatDate = (iso) => {
           const dt = new Date(iso)
@@ -260,7 +194,7 @@ export default function ReservationPage() {
         const dtstamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
         const uid = `res-${Date.now()}@${typeof window !== "undefined" ? window.location.hostname : "example.com"}`
         const dtstart = formatDate(startDateIso)
-        const dtend = formatDate(endDateIso) // iCal DTEND is exclusive for DATE values
+        const dtend = formatDate(endDateIso)
  
         const summary = `Reservation: ${guest.firstName || ""} ${guest.lastName || ""}`.trim()
         const description = [
@@ -288,14 +222,11 @@ export default function ReservationPage() {
         ].join("\r\n")
       }
 
-      // Try to POST the ICS to our proxy which will attempt to push it to the remote URL.
       const tryPushIcs = async (ics) => {
         try {
           const iCalUrl = process.env.NEXT_PUBLIC_TRIPLE_ICAL
           if (!iCalUrl) return { ok: false, message: "No remote calendar configured." }
 
-          // Detect Booking.com export/read-only URLs and avoid attempting to push there.
-          // Booking.com export endpoints (like the one you used) are typically read-only and return 500 on PUT.
           try {
             const parsed = new URL(iCalUrl)
             const host = (parsed.hostname || "").toLowerCase()
@@ -303,21 +234,18 @@ export default function ReservationPage() {
             if (host.includes("booking.com") || path.includes("/v1/export")) {
               return {
                 ok: false,
-                message:
-                  "Configured calendar appears to be a Booking.com export (read-only). Automatic push is not supported. Use Booking.com partner API / channel manager or import the generated .ics manually.",
+                message: "Configured calendar appears to be a Booking.com export (read-only).",
               }
             }
           } catch (e) {
-            // ignore parsing errors and continue to attempt push
             console.warn("tryPushIcs: failed to parse iCalUrl", e)
           }
 
-          // Non-Booking.com destinations: attempt POST -> proxy -> remote PUT
           const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
           const res = await fetch(proxyUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ics, method: "PUT" }), // try PUT by default
+            body: JSON.stringify({ ics, method: "PUT" }),
           })
           const json = await res.json().catch(() => ({ ok: false, message: `HTTP ${res.status}` }))
           if (!res.ok || !json.ok) return { ok: false, message: json?.message || `Remote responded ${res.status}` }
@@ -327,17 +255,14 @@ export default function ReservationPage() {
         }
       }
 
-      // build ICS and attempt push (DTEND uses checkOut date)
       const ics = buildIcsForReservation(payload.guest || {}, payload.checkIn, payload.checkOut)
       const pushResult = await tryPushIcs(ics)
 
-      // Booking saved — notify user once and keep calendar push diagnostics in logs.
       console.log("Calendar push result:", pushResult)
       alert("Booking request saved.")
  
       setSaved(true)
       setSubmitting(false)
-      // navigate to home after a short delay so user sees the alerts
       setTimeout(() => {
         router.push("/").catch(() => {})
       }, 1200)
@@ -348,12 +273,10 @@ export default function ReservationPage() {
     }
   }
 
-  // mobile summary toggle state
   const [showSummary, setShowSummary] = useState(false)
-
-  // avoid reading window during SSR — determine small-screen only after client mount
   const [mounted, setMounted] = useState(false)
   const [isClientSmall, setIsClientSmall] = useState(false)
+  
   useEffect(() => {
     setMounted(true)
     const update = () => setIsClientSmall(window.innerWidth < 768)
@@ -362,18 +285,14 @@ export default function ReservationPage() {
     return () => window.removeEventListener("resize", update)
   }, [])
 
-  // Ensure navbar is forced black only on this page by toggling a body class
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.body.classList.add("reservation-navbar-black");
-      // cleanup on unmount
       return () => document.body.classList.remove("reservation-navbar-black");
     }
     return undefined;
   }, []);
 
-  // Page-only inline body padding to offset the sticky header so content isn't hidden.
-  // Sets 72px on desktop and 64px on narrow screens; restores previous padding on unmount.
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
     const prev = document.body.style.paddingTop || "";
@@ -388,18 +307,32 @@ export default function ReservationPage() {
     };
   }, []);
 
-  // small step indicator UI
   const StepHeader = () => (
     <div className="step-header">
-      <div className="step-row">
-        <div className={`step-pill ${step === 1 ? "active" : ""}`}>1. Choose Room</div>
-        <div className={`step-bar ${step > 1 ? "done" : ""}`} />
-        <div className={`step-pill ${step === 2 ? "active" : ""}`}>2. Guest Details</div>
+      <div className="step-container">
+        <div className={`step-circle ${step >= 1 ? "active" : ""} ${step > 1 ? "completed" : ""}`}>
+          {step > 1 ? "✓" : "1"}
+        </div>
+        <div className="step-label-box">
+          <span className="step-label">Choose Room</span>
+        </div>
+      </div>
+      
+      <div className="connector-line">
+        <div className={`connector-fill ${step > 1 ? "filled" : ""}`} />
+      </div>
+      
+      <div className="step-container">
+        <div className={`step-circle ${step >= 2 ? "active" : ""}`}>
+          <span className="heart-icon">♥</span>
+        </div>
+        <div className="step-label-box">
+          <span className="step-label">Guest Details</span>
+        </div>
       </div>
     </div>
   )
 
-  // helper to produce concise occupancy / AC string for a room object
   const formatRoomMeta = (r) => {
     if (!r) return ""
     const minA = Number.isFinite(r.minAdults) ? r.minAdults : null
@@ -422,9 +355,7 @@ export default function ReservationPage() {
     return [adultsPart, childrenPart, special, acPart].filter(Boolean).join(" · ")
   }
 
-  // when clicking Continue in the aside summary
   const handleAsideContinue = () => {
-    // ensure there's at least one selected room; if none, use selectedRoom as fallback
     if (selectedRooms.length === 0 && selectedRoom) {
       setSelectedRooms([{ room: selectedRoom, qty: 1 }])
     }
@@ -439,134 +370,135 @@ export default function ReservationPage() {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  const [includeBreakfast, setIncludeBreakfast] = useState(false);
-
   const totalPrice = useMemo(() => {
     const roomPrice = selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0);
-    return roomPrice; // Breakfast price is no longer included in the total
-  }, [selectedRooms]);
+    const breakfastPrice = breakfastType
+      ? totalGuests * breakfastPrices[breakfastType]
+      : 0;
+    return roomPrice + breakfastPrice;
+  }, [selectedRooms, breakfastType, totalGuests]);
 
-  const handleBreakfastChange = (e) => {
-    setIncludeBreakfast(e.target.checked);
+  const handleBreakfastTypeChange = (e) => {
+    setBreakfastType(e.target.value);
   };
 
   return ( 
     <div className="reservation-page">
-      {/* Left summary */}
-      {/* aria-hidden / visibility for small screens is decided only after mount to avoid hydration mismatch */}
-      <aside
-        className={`aside ${showSummary ? "visible" : ""}`}
-        aria-hidden={mounted && isClientSmall ? !showSummary : false}
-      >
-        {/* full details (hidden on small screens unless .visible) */}
+      <aside className={`aside ${showSummary ? "visible" : ""}`} aria-hidden={mounted && isClientSmall ? !showSummary : false}>
         <div className="full-details">
           <h3 className="heading">DATES</h3>
           <div className="aside-body">
-            <div><strong>Check-In</strong></div>
-            <div>{ci ? format(ci, "EEE, yyyy-MM-dd") : "-"}</div>
-            <div className="spacer" />
-            <div><strong>Check-Out</strong></div>
-            <div>{co ? format(co, "EEE, yyyy-MM-dd") : "-"}</div>
-            <div className="spacer" />
-            <div><strong>Total Nights</strong></div>
-            <div>{nights}</div>
-            <div className="spacer" />
-            <div><strong>Total Adults</strong> {adults}</div>
-            <div><strong>Total Children</strong> {children}</div>
-            <div><strong>Total Guests</strong> {totalGuests} People</div>
+            <div className="info-row">
+              <strong>Check-In</strong>
+              <span>{ci ? format(ci, "EEE, MMM dd") : "-"}</span>
+            </div>
+            <div className="info-row">
+              <strong>Check-Out</strong>
+              <span>{co ? format(co, "EEE, MMM dd") : "-"}</span>
+            </div>
+            <div className="info-row highlight">
+              <strong>Total Nights</strong>
+              <span>{nights}</span>
+            </div>
           </div>
 
           <hr className="divider" />
 
-          <h4 className="subheading">SELECTED ROOM</h4>
+          <h4 className="subheading">GUESTS</h4>
+          <div className="guest-info">
+            <div className="guest-pill">
+              <span className="guest-icon">👤</span>
+              <span>{adults} Adults</span>
+            </div>
+            <div className="guest-pill">
+              <span className="guest-icon">👶</span>
+              <span>{children} Children</span>
+            </div>
+          </div>
+
+          <hr className="divider" />
+
+          <h4 className="subheading">SELECTED ROOMS</h4>
           <div className="selected-room">
             {selectedRooms.length === 0 ? (
-              <>
+              <div className="empty-state">
                 <div className="room-title">{selectedRoom?.title || "No room selected"}</div>
                 <div className="room-price">Price per night: {selectedRoom ? `${selectedRoom.price}$` : "-"}</div>
-              </>
+              </div>
             ) : (
               <>
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>{selectedRooms.length} selected</div>
-                <div style={{ display: "grid", gap: 8 }}>
-                  {selectedRooms.map((sr) => (
-                    <div key={sr.room.id} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                      <div>
-                        <div style={{ fontWeight: 700 }}>{sr.room.title} <small style={{ fontWeight: 600, color: "#666" }}>x{sr.qty}</small></div>
-                        <div style={{ color: "#666", fontSize: 13 }}>{formatRoomMeta(sr.room)}</div>
+                <div className="room-list">
+                  {selectedRooms.map((sr, idx) => (
+                    <div key={sr.room.id} className="room-item" style={{animationDelay: `${idx * 0.1}s`}}>
+                      <div className="room-info">
+                        <div className="room-title-line">
+                          ROOM-{sr.room.id}. {sr.room.title}
+                          <span className="qty-badge">×{sr.qty}</span>
+                        </div>
+                        <div className="room-meta-line">{formatRoomMeta(sr.room)}</div>
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontWeight: 700 }}>{((sr.room.price || 0) * sr.qty).toFixed(2)}$</div>
-                        <div style={{ fontSize: 12, color: "#666" }}>{(sr.room.price || 0).toFixed(2)}$ / night</div>
+                      <div className="room-price-info">
+                        <div className="price-total">${((sr.room.price || 0) * sr.qty).toFixed(2)}</div>
+                        <div className="price-per">${(sr.room.price || 0).toFixed(2)} / night</div>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 10, fontWeight: 800, display: "flex", justifyContent: "space-between" }}>
-                  <div>Total</div>
-                  <div>{selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$</div>
-                </div>
-                {/* combined suitability hint */}
                 {(() => {
                   const s = multiSuitability()
                   return !s.ok ? (
-                    <div style={{ marginTop: 8, color: "#b91c1c", fontSize: 13 }}>
-                      {`Not suitable: ${s.reason}`}
-                    </div>
+                    <div className="suitability-warning">{`Not suitable: ${s.reason}`}</div>
                   ) : (
-                    <div style={{ marginTop: 8, color: "#065f46", fontSize: 13 }}>Selected rooms cover your guest count</div>
+                    <div className="suitability-success">Selected rooms cover your guest count</div>
                   )
                 })()}
               </>
             )}
-            <div className="room-details">
-              <div className="row"><div>Space Price</div><div>{selectedRooms.length ? `${selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$` : (selectedRoom ? `${(selectedRoom.price).toFixed(2)}$` : "-")}</div></div>
-              <div className="row"><div>Tax</div><div>FREE</div></div>
-              <div className="row">
-                <div>
+            
+            <div className="price-breakdown">
+              <div className="price-row">
+                <span>Space Price</span>
+                <span>{selectedRooms.length ? `${selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$` : (selectedRoom ? `${(selectedRoom.price).toFixed(2)}$` : "-")}</span>
+              </div>
+              <div className="price-row">
+                <span>Tax</span>
+                <span className="free-tag">FREE</span>
+              </div>
+              <div className="price-row">
+                <span>
                   Breakfast <span style={{ color: "red" }}>*</span>
-                  <small style={{ marginLeft: "8px", color: "#b91c1c", fontSize: "12px" }}>Extra charge</small>
-                </div>
+                </span>
                 <div>
-                  <input
-                    type="checkbox"
-                    checked={includeBreakfast}
-                    onChange={handleBreakfastChange}
-                  />
-                  {includeBreakfast ? "Included" : "Not included"}
+                  <select
+                    value={breakfastType}
+                    onChange={handleBreakfastTypeChange}
+                    className="breakfast-select"
+                  >
+                    <option value="">Not included</option>
+                    <option value="sriLanka">Sri Lanka - 3.32$</option>
+                    <option value="continental">Continental - 4.20$/pp</option>
+                  </select>
                 </div>
               </div>
-              <div className="row">
-                <div>Total</div>
-                <div>{totalPrice.toFixed(2)}$</div>
+              <div className="price-row total-row">
+                <span>Total</span>
+                <span className="total-amount">${(totalPrice * nights).toFixed(2)}</span>
               </div>
             </div>
-
-          </div> {/* <-- ensure selected-room is closed BEFORE Continue button */}
-
-          {/* add Continue button under totals so users can proceed from the aside */}
-          <div style={{ marginTop: 8 }}>
-            <button
-              type="button"
-              className="aside-continue"
-              onClick={handleAsideContinue}
-              disabled={!(selectedRooms.length > 0 || selectedRoom)}
-            >
-              Continue
-            </button>
           </div>
 
-        </div> {/* <-- close full-details */}
+          <button 
+            type="button" 
+            className="aside-continue" 
+            onClick={handleAsideContinue} 
+            disabled={!(selectedRooms.length > 0 || selectedRoom)}
+            style={{ display: step === 1 ? "block" : "none" }} // Hide button when in Guest Details section
+          >
+            Continue to Guest Details →
+          </button>
+        </div>
 
-        {/* compact total preview always visible on mobile; click to toggle details */}
-        <div
-          className={`total-preview${showSummary ? " open" : ""}`}
-          role="button"
-          tabIndex={0}
-          onClick={() => setShowSummary((s) => !s)}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowSummary((s) => !s) }}
-          aria-expanded={showSummary}
-        >
+        <div className={`total-preview${showSummary ? " open" : ""}`} role="button" tabIndex={0} onClick={() => setShowSummary((s) => !s)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowSummary((s) => !s) }} aria-expanded={showSummary}>
           <div className="total-left">TOTAL</div>
           <div className="total-right">
             {selectedRooms.length
@@ -575,14 +507,10 @@ export default function ReservationPage() {
               ? `${(selectedRoom.price * Math.max(1, nights)).toFixed(2)}$`
               : "-"}
           </div>
-
-          {/* single Continue button is available in the aside totals above; compact preview no longer shows a duplicate */}
-          
           <div className={`chev ${showSummary ? "open" : ""}`}>▾</div>
         </div>
       </aside>
 
-      {/* Right: steps + content */}
       <main className="main">
         <div className="mobile-toggle">
           <button type="button" className="toggle-btn" onClick={() => setShowSummary((s) => !s)} aria-expanded={showSummary}>
@@ -590,70 +518,59 @@ export default function ReservationPage() {
           </button>
         </div>
 
-        <StepHeader />
+        <ProgressBar currentStep={step} />
 
         {saved ? (
-          <div className="saved">
-            <h2>Reservation received</h2>
+          <div className="saved-state">
+            <div className="success-icon">✓</div>
+            <h2>Reservation Confirmed!</h2>
             <p>Your booking has been saved. A team member will contact you shortly.</p>
           </div>
         ) : (
           <>
             {step === 1 && (
-              <section>
+              <section className="room-section">
                 <h2 className="section-title">Choose a room</h2>
-                <div className="room-grid" role="list">
+                <div className="room-grid">
                   {visibleRooms.length === 0 ? (
                     <div style={{ padding: 20, width: "100%", textAlign: "center", color: "#666" }}>
-                      No rooms match the selected room type. Please choose a different type.
+                      No rooms match the selected room type.
                     </div>
                   ) : (
-                    visibleRooms.map((r) => {
-                      // if we add this room (or it's already added) what is combined capacity?
+                    visibleRooms.map((r, idx) => {
                       const already = selectedRooms.find((sr) => String(sr.room.id) === String(r.id))
                       const tempList = already ? selectedRooms : [...selectedRooms, { room: r, qty: 1 }]
                       const suitability = multiSuitability(tempList)
                       return (
-                        
-                        <div key={r.id} className={`room-card ${already ? "selected" : ""}`} role="listitem">
-                          <div className="room-img" style={{ backgroundImage: `url(${r.img})` }} />
-                          <div className="room-row">
-                            <div>
-                              <div className="room-name">{r.title}</div>
-                              <div className="room-rate">{r.price}$ / night</div>
-                              {/* occupancy / AC details */}
-                              <div className="room-meta" style={{ marginTop: 6, color: "#555", fontSize: 13, fontWeight: 600 }}>
-                                {formatRoomMeta(r)}
-                              </div>
-                              {/* quick hint when adding this room would still be insufficient */}
-                              {!suitability.ok && (
-                                <div style={{ marginTop: 6, color: "#b91c1c", fontSize: 13 }}>
-                                  {suitability.reason}
-                                </div>
-                              )}
+                        <div key={r.id} className={`room-card ${already ? "selected" : ""}`} style={{animationDelay: `${idx * 0.1}s`}}>
+                          <div className="room-img" style={{ backgroundImage: `url(${r.img})` }}>
+                            {already && <div className="selected-badge">✓ Selected</div>}
+                          </div>
+                          <div className="room-content">
+                            <div className="room-header">
+                              <div className="room-name">ROOM-{r.id}. {r.title}</div>
+                              <div className="room-rate">${r.price} / night</div>
                             </div>
+                            <div className="room-meta">{formatRoomMeta(r)}</div>
+                            {!suitability.ok && (
+                              <div className="warning-msg">{suitability.reason}</div>
+                            )}
                             <div className="room-actions">
-                              {/* toggle add/remove */}
                               {!already ? (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-                                  <button onClick={() => addRoom(r)} className="btn small muted">Add</button>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
+                                  <button onClick={() => addRoom(r)} className="btn-add">Add</button>
                                   {typeLimitMessage && typeLimitMessage.type === getTypeKey(r) && (
-                                    <div style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700, textAlign: "right" }}>
-                                      {typeLimitMessage.msg}
-                                    </div>
+                                    <div className="limit-msg">{typeLimitMessage.msg}</div>
                                   )}
                                 </div>
                               ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-                                  <button onClick={() => removeRoom(r)} className="btn small">Remove</button>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
+                                  <button onClick={() => removeRoom(r)} className="btn-remove">Remove</button>
                                   {typeLimitMessage && typeLimitMessage.type === getTypeKey(r) && (
-                                    <div style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700, textAlign: "right" }}>
-                                      {typeLimitMessage.msg}
-                                    </div>
+                                    <div className="limit-msg">{typeLimitMessage.msg}</div>
                                   )}
                                 </div>
                               )}
-                              {/* per-card Continue removed — single Continue is now in the summary */}
                             </div>
                           </div>
                         </div>
@@ -665,13 +582,13 @@ export default function ReservationPage() {
             )}
 
             {step === 2 && (
-              <section>
+              <section className="form-section">
                 <h2 className="section-title">Guest Details</h2>
                 <form onSubmit={handleSubmit}>
-                  <div className="two-col-grid">
-                    <div>
-                      <label className="label">Country *</label>
-                      <select name="country" required value={form.country} onChange={handleChange} className="input">
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label>Country *</label>
+                      <select name="country" required value={form.country} onChange={handleChange}>
                         <option value="">Select Your Country</option>
                         <option>United States</option>
                         <option>United Kingdom</option>
@@ -679,50 +596,50 @@ export default function ReservationPage() {
                       </select>
                     </div>
 
-                    <div>
-                      <label className="label">Mobile Number *</label>
-                      <input name="mobile" required value={form.mobile} onChange={handleChange} placeholder="Mobile Number" className="input" />
+                    <div className="form-field">
+                      <label>Mobile Number *</label>
+                      <input name="mobile" required value={form.mobile} onChange={handleChange} placeholder="Mobile Number" />
                     </div>
 
-                    <div>
-                      <label className="label">First Name *</label>
-                      <input name="firstName" required value={form.firstName} onChange={handleChange} placeholder="First name" className="input" />
+                    <div className="form-field">
+                      <label>First Name *</label>
+                      <input name="firstName" required value={form.firstName} onChange={handleChange} placeholder="First name" />
                     </div>
 
-                    <div>
-                      <label className="label">Last Name</label>
-                      <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Last name" className="input" />
+                    <div className="form-field">
+                      <label>Last Name</label>
+                      <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Last name" />
                     </div>
 
-                    <div className="full">
-                      <label className="label">Address *</label>
-                      <input name="address" required value={form.address} onChange={handleChange} placeholder="Street Address" className="input" />
+                    <div className="form-field full">
+                      <label>Address *</label>
+                      <input name="address" required value={form.address} onChange={handleChange} placeholder="Street Address" />
                     </div>
 
-                    <div>
-                      <label className="label">City / Town *</label>
-                      <input name="city" required value={form.city} onChange={handleChange} placeholder="City or Town name" className="input" />
+                    <div className="form-field">
+                      <label>City / Town *</label>
+                      <input name="city" required value={form.city} onChange={handleChange} placeholder="City or Town" />
                     </div>
 
-                    <div>
-                      <label className="label">Email Address *</label>
-                      <input name="email" required type="email" value={form.email} onChange={handleChange} placeholder="Contact Email Address" className="input" />
+                    <div className="form-field">
+                      <label>Email Address *</label>
+                      <input name="email" required type="email" value={form.email} onChange={handleChange} placeholder="Email" />
                     </div>
 
-                    <div className="full">
-                      <label className="label">Extra Notes</label>
-                      <textarea name="notes" value={form.notes} onChange={handleChange} placeholder="Any extra details" rows={4} className="input" />
+                    <div className="form-field full">
+                      <label>Extra Notes</label>
+                      <textarea name="notes" value={form.notes} onChange={handleChange} placeholder="Any special requests..." rows={4} />
                     </div>
 
-                    <div className="full agree-row">
+                    <div className="form-field full agree-field">
                       <input name="agree" id="agree" type="checkbox" checked={form.agree} onChange={handleChange} required />
-                      <label htmlFor="agree" className="agree-label">By clicking here, I state that I have read and understood the terms and conditions.</label>
+                      <label htmlFor="agree">By clicking here, I state that I have read and understood the terms and conditions.</label>
                     </div>
                   </div>
 
                   <div className="action-row">
-                    <button type="button" onClick={handleBack} className="btn secondary">Back</button>
-                    <button type="submit" disabled={submitting} className="btn primary">{submitting ? "Saving..." : "BOOK RESERVATION"}</button>
+                    <button type="button" onClick={handleBack} className="btn-back">← Back</button>
+                    <button type="submit" disabled={submitting} className="btn-submit">{submitting ? "Processing..." : "BOOK RESERVATION"}</button>
                   </div>
                 </form>
               </section>
@@ -732,149 +649,912 @@ export default function ReservationPage() {
       </main>
 
       <style jsx>{`
-        /* mobile-first layout */
-        .reservation-page{
-          max-width:1100px;
-          margin:18px auto;
-          padding:12px;
-          display:flex;
-          flex-direction:column;
-          gap:16px;
-          box-sizing:border-box;
-          font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-        }
-        .aside{
-          width:100%;
-          background:#f7f7f7;
-          padding:14px;
-          border-radius:8px;
-          box-sizing:border-box;
-        }
-        .heading{ margin:0 0 8px 0; letter-spacing:0.4px; }
-        .aside-body{ font-size:14px; color:#333; line-height:1.6; }
-        .spacer{ height:8px; }
-        .divider{ margin:18px 0; border:none; height:1px; background:#e9e9e9; }
-        .subheading{ margin:6px 0; }
-        .selected-room{ background:#fff; padding:12px; border-radius:8px; margin-bottom:12px; }
-        .room-title{ font-weight:700; }
-        .room-price{ color:#666; font-size:13px; }
-        .room-details .row{ display:flex; justify-content:space-between; font-size:14px; margin-top:6px; }
-        .total-box{ margin-top:12px; background:#111; color:#fff; padding:12px; border-radius:8px; font-weight:700; }
-
-        /* compact total preview for mobile */
-        .total-preview{
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap:8px;
-          padding:12px;
-          border-radius:8px;
-          background:#111;
-          color:#fff;
-          font-weight:700;
-          cursor:pointer;
-          user-select:none;
-        }
-        .total-preview .chev{ margin-left:8px; transition: transform 200ms ease; }
-        .total-preview.open .chev{ transform: rotate(180deg); }
-        .total-left{ font-size:14px; color:#fff; }
-        .total-right{ font-size:16px; color:#fff; }
-
-        .main{ width:100%; box-sizing:border-box; background:#fff; padding:12px; border-radius:8px; }
-        .mobile-toggle{ display:block; margin-bottom:12px; }
-        .toggle-btn{ width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; background:#fff; }
-
-        .step-header{ margin-bottom:12px; }
-        .step-row{ display:flex; gap:8px; align-items:center; }
-        .step-pill{ padding:8px 12px; border-radius:8px; background:#eee; color:#666; font-weight:700; }
-        .step-pill.active{ background:#ff7a59; color:#000; }
-        .step-bar{ height:8px; flex:1; background:#f2f2f2; border-radius:4px; }
-        .step-bar.done{ background:#ffbf69; }
-
-        .section-title{ margin-top:0; margin-bottom:12px; font-size:20px; }
-
-        .room-grid{ display:grid; grid-template-columns: 1fr; gap:12px; }
-        .room-card{ border:1px solid #eee; border-radius:8px; padding:12px; background:#fafafa; display:flex; flex-direction:column; gap:10px; }
-        .room-card.selected{ border-color:#ff7a59; box-shadow:0 2px 8px rgba(255,122,89,0.06); }
-        .room-img{ height:160px; background-size:cover; background-position:center; border-radius:6px; }
-
-        .room-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; }
-        .room-name{ font-weight:700; font-size:16px; }
-        .room-rate{ color:#666; font-size:13px; margin-top:4px; }
-        .room-actions{ display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
-        .btn{ border-radius:8px; padding:10px 12px; cursor:pointer; border:none; font-weight:600; }
-        .btn.small{ padding:8px 10px; font-size:13px; }
-        .btn.muted{ background:#fff; border:1px solid #ddd; color:#000; }
-        .btn.primary{ background:#b88639; color:#fff; width:100%; }
-        .btn.continue, .btn.continue:hover{ background:#ff7a59; color:#000; border:none; }
-        .btn.secondary{ background:#eee; color:#000; width:100%; }
-
-        .two-col-grid{ display:grid; grid-template-columns: 1fr; gap:12px; }
-        .label{ display:block; margin-bottom:6px; font-size:13px; }
-        .input{ width:100%; padding:10px; border-radius:8px; border:1px solid #e6e6e6; box-sizing:border-box; }
-        .full{ grid-column: 1 / -1; }
-
-        .agree-row{ display:flex; gap:8px; align-items:flex-start; }
-        .agree-label{ font-size:13px; }
-
-        .action-row{ margin-top:16px; display:flex; flex-direction:column; gap:12px; }
-
-        /* larger screens */
-        @media (min-width: 769px){
-          .reservation-page{ flex-direction:row; padding:20px; gap:24px; }
-          .aside{ width:320px; flex-shrink:0; order:0; display:block; }
-          .main{ order:1; padding:18px; }
-          .mobile-toggle{ display:none; }
-          .room-grid{ grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-          .two-col-grid{ grid-template-columns: 1fr 1fr; }
-          .room-actions{ flex-direction:row; align-items:center; }
-          .btn.primary{ width:auto; min-width:180px; }
-          .btn.secondary{ width:auto; min-width:120px; }
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
-        /* very small screens tweaks */
-        @media (max-width: 420px){
-          .room-img{ height:180px; }
-          .toggle-btn{ padding:12px; font-size:15px; }
-          .step-pill{ font-size:14px; padding:8px 10px; }
+        @keyframes slideInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
         }
 
-        /* hide full-details on small screens unless aside.visible */
-        @media (max-width: 768px){
-          .aside .full-details{ display:none; }
-          .aside.visible .full-details{ display:block; margin-bottom:12px; }
-          /* keep preview visible */
-          .aside .total-preview{ display:flex; }
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
 
-        /* aside continue button */
-        .aside-continue{
-          width:100%;
-          margin-top:8px;
-          background:#ff7a59;
-          color:#000;
-          border:none;
-          padding:10px 12px;
-          border-radius:8px;
-          font-weight:700;
-          cursor:pointer;
-        }
-        .aside-continue[disabled]{
-          opacity:0.6;
-          cursor:not-allowed;
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
+          }
         }
 
-        /* ensure compact preview does not duplicate Continue button */
-        .aside .total-preview .aside-continue{ display:none; }
+        @keyframes progressFill {
+          from {
+            width: 0%;
+          }
+          to {
+            width: 100%;
+          }
+        }
 
-        /* Force header/nav to be black on reservation page */
-        body.reservation-navbar-black .navbar,
-        body.reservation-navbar-black .header {
+        @keyframes checkIn {
+          0% {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.1);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .reservation-page {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 20px;
+          display: flex;
+          gap: 24px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          flex-direction: column;
+        }
+
+        .aside {
+          width: 100%;
+          animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .full-details {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 24px;
+          border-radius: 16px;
+          box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .heading {
+          margin: 0 0 16px 0;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1.5px;
+          opacity: 0.9;
+        }
+
+        .aside-body {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 0;
+          font-size: 14px;
+        }
+
+        .info-row.highlight {
+          background: rgba(255,255,255,0.15);
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 8px;
+          font-weight: 600;
+        }
+
+        .divider {
+          border: none;
+          height: 1px;
+          background: rgba(255,255,255,0.2);
+          margin: 20px 0;
+        }
+
+        .subheading {
+          margin: 0 0 12px 0;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1.5px;
+          opacity: 0.9;
+        }
+
+        .guest-info {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .guest-pill {
+          flex: 1;
+          min-width: 120px;
+          background: rgba(255,255,255,0.15);
+          padding: 12px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.3s ease;
+        }
+
+        .guest-pill:hover {
+          background: rgba(255,255,255,0.25);
+          transform: translateY(-2px);
+        }
+
+        .guest-icon {
+          font-size: 18px;
+        }
+
+        .selected-room {
+          background: rgba(255,255,255,0.1);
+          padding: 16px;
+          border-radius: 12px;
+          margin-bottom: 16px;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 20px;
+          opacity: 0.8;
+        }
+
+        .room-title {
+          font-weight: 700;
+          margin-bottom: 4px;
+        }
+
+        .room-price {
+          color: rgba(255,255,255,0.8);
+          font-size: 13px;
+        }
+
+        .room-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .room-item {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px;
+          background: rgba(255,255,255,0.1);
+          border-radius: 8px;
+          animation: fadeInUp 0.4s ease both;
+          transition: all 0.3s ease;
+        }
+
+        .room-item:hover {
+          background: rgba(255,255,255,0.15);
+          transform: translateX(4px);
+        }
+
+        .room-info {
+          flex: 1;
+        }
+
+        .room-title-line {
+          font-weight: 600;
+          font-size: 13px;
+          margin-bottom: 4px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .qty-badge {
+          background: rgba(255,255,255,0.2);
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .room-meta-line {
+          font-size: 11px;
+          opacity: 0.8;
+          line-height: 1.4;
+        }
+
+        .room-price-info {
+          text-align: right;
+        }
+
+        .price-total {
+          font-weight: 700;
+          font-size: 16px;
+        }
+
+        .price-per {
+          font-size: 11px;
+          opacity: 0.7;
+        }
+
+        .suitability-warning {
+          margin-top: 8px;
+          color: #fecaca;
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .suitability-success {
+          margin-top: 8px;
+          color: #86efac;
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .price-breakdown {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .price-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 14px;
+        }
+
+        .price-row.total-row {
+          margin-top: 8px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255,255,255,0.2);
+          font-weight: 700;
+          font-size: 16px;
+        }
+
+        .free-tag {
+          background: #10b981;
+          color: white;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .total-amount {
+          font-size: 20px;
+        }
+
+        .aside-continue {
+          width: 100%;
+          padding: 14px;
+          background: white;
+          color: #667eea;
+          border: none;
+          border-radius: 10px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          font-size: 14px;
+        }
+
+        .aside-continue:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .aside-continue:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .aside-continue:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .total-preview {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 16px;
+          border-radius: 12px;
+          background: #111;
+          color: #fff;
+          font-weight: 700;
+          cursor: pointer;
+          user-select: none;
+          margin-top: 12px;
+          transition: all 0.3s ease;
+        }
+
+        .total-preview:hover {
+          background: #1a1a1a;
+          transform: translateY(-2px);
+        }
+
+        .total-preview .chev {
+          margin-left: 8px;
+          transition: transform 0.3s ease;
+          font-size: 18px;
+        }
+
+        .total-preview.open .chev {
+          transform: rotate(180deg);
+        }
+
+        .total-left {
+          font-size: 14px;
+        }
+
+        .total-right {
+          font-size: 18px;
+        }
+
+        .main {
+          flex: 1;
+          animation: fadeInUp 0.6s ease 0.2s both;
+        }
+
+        .mobile-toggle {
+          display: block;
+          margin-bottom: 16px;
+        }
+
+        .toggle-btn {
+          width: 100%;
+          padding: 12px;
+          border-radius: 10px;
+          border: 2px solid #e5e7eb;
+          background: white;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+          border-color: #667eea;
+          background: #f8f9ff;
+        }
+
+        /* New Step Progress Bar Styles */
+        .step-header {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 40px;
+          padding: 0 20px;
+        }
+
+        .step-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          position: relative;
+        }
+
+        .step-circle {
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          border: 3px solid #d1d5db;
+          background: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 18px;
+          font-weight: 700;
+          color: #9ca3af;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          z-index: 2;
+        }
+
+        .step-circle.active {
+          border-color: #10b981;
+          background: #10b981;
+          color: white;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+          animation: checkIn 0.5s ease;
+        }
+
+        .step-circle.completed {
+          border-color: #10b981;
+          background: #10b981;
+          color: white;
+        }
+
+        .heart-icon {
+          font-size: 22px;
+          color: inherit;
+        }
+
+        .step-circle.active .heart-icon {
+          animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .step-label-box {
+          position: absolute;
+          top: 60px;
+          white-space: nowrap;
+        }
+
+        .step-label {
+          font-size: 13px;
+          font-weight: 600;
+          color: #6b7280;
+        }
+
+        .step-circle.active + .step-label-box .step-label {
+          color: #10b981;
+          font-weight: 700;
+        }
+
+        .connector-line {
+          width: 120px;
+          height: 3px;
+          background: #e5e7eb;
+          border-radius: 2px;
+          position: relative;
+          overflow: hidden;
+          margin: 0 -10px;
+        }
+
+        .connector-fill {
+          position: absolute;
+          left: 0;
+          top: 0;
+          height: 100%;
+          width: 0%;
+          background: #10b981;
+          transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .connector-fill.filled {
+          width: 100%;
+          animation: progressFill 0.6s ease;
+        }
+
+        .section-title {
+          margin: 0 0 24px 0;
+          font-size: 28px;
+          font-weight: 700;
+          color: #111827;
+        }
+
+        .room-section,
+        .form-section {
+          animation: fadeInUp 0.5s ease;
+        }
+
+        .room-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+
+        .room-card {
+          background: white;
+          border: 2px solid #e5e7eb;
+          border-radius: 16px;
+          overflow: hidden;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+          animation: scaleIn 0.5s ease both;
+        }
+
+        .room-card:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+          border-color: #667eea;
+        }
+
+        .room-card.selected {
+          border-color: #10b981;
+          box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+          background: linear-gradient(to bottom, #ffffff, #f0fdf4);
+        }
+
+        .room-img {
+          height: 200px;
+          background-size: cover;
+          background-position: center;
+          position: relative;
+        }
+
+        .selected-badge {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: #10b981;
+          color: white;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 700;
+          animation: pulse 2s infinite;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .room-content {
+          padding: 20px;
+        }
+
+        .room-header {
+          margin-bottom: 12px;
+        }
+
+        .room-name {
+          font-weight: 700;
+          font-size: 18px;
+          color: #111827;
+          margin-bottom: 6px;
+        }
+
+        .room-rate {
+          color: #667eea;
+          font-weight: 700;
+          font-size: 16px;
+        }
+
+        .room-meta {
+          color: #6b7280;
+          font-size: 13px;
+          margin-bottom: 16px;
+          line-height: 1.6;
+        }
+
+        .warning-msg {
+          background: #fef2f2;
+          color: #dc2626;
+          padding: 8px 12px;
+          border-radius: 8px;
+          font-size: 12px;
+          margin-bottom: 12px;
+          font-weight: 600;
+        }
+
+        .limit-msg {
+          color: #dc2626;
+          font-size: 12px;
+          font-weight: 700;
+          text-align: center;
+        }
+
+        .room-actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        .btn-add,
+        .btn-remove {
+          flex: 1;
+          padding: 12px;
+          border-radius: 10px;
+          border: none;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          font-size: 14px;
+        }
+
+        .btn-add {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+
+        .btn-add:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-remove {
+          background: #fef2f2;
+          color: #dc2626;
+          border: 2px solid #dc2626;
+        }
+
+        .btn-remove:hover {
+          background: #dc2626;
+          color: white;
+          transform: translateY(-2px);
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 20px;
+          margin-bottom: 24px;
+        }
+
+        .form-field {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .form-field.full {
+          grid-column: 1 / -1;
+        }
+
+        .form-field label {
+          font-size: 14px;
+          font-weight: 600;
+          color: #374151;
+        }
+
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+          padding: 12px;
+          border-radius: 10px;
+          border: 2px solid #e5e7eb;
+          font-size: 14px;
+          transition: all 0.3s ease;
+          font-family: inherit;
+        }
+
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus {
+          outline: none;
+          border-color: #667eea;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .agree-field {
+          flex-direction: row;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .agree-field input[type="checkbox"] {
+          margin-top: 4px;
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+        }
+
+        .agree-field label {
+          flex: 1;
+          font-size: 13px;
+          cursor: pointer;
+        }
+
+        .action-row {
+          display: flex;
+          gap: 12px;
+          flex-direction: column;
+        }
+
+        .btn-back,
+        .btn-submit {
+          padding: 14px 24px;
+          border-radius: 10px;
+          border: none;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          font-size: 15px;
+        }
+
+        .btn-back {
+          background: #f3f4f6;
+          color: #374151;
+        }
+
+        .btn-back:hover {
+          background: #e5e7eb;
+          transform: translateY(-2px);
+        }
+
+        .btn-submit {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-submit:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .saved-state {
+          text-align: center;
+          padding: 60px 20px;
+          animation: fadeInUp 0.6s ease;
+        }
+
+        .success-icon {
+          width: 80px;
+          height: 80px;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 40px;
+          margin: 0 auto 24px;
+          animation: checkIn 0.6s ease;
+          box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+        }
+
+        .saved-state h2 {
+          font-size: 28px;
+          color: #111827;
+          margin: 0 0 12px 0;
+        }
+
+        .saved-state p {
+          font-size: 16px;
+          color: #6b7280;
+        }
+
+        .breakfast-select {
+          padding: 8px 12px;
+          border-radius: 8px;
+          border: 2px solid #e5e7eb;
+          font-size: 14px;
+          background: #fff;
+          color: #374151;
+          transition: border-color 0.3s;
+          min-width: 180px;
+        }
+        .breakfast-select:focus {
+          border-color: #667eea;
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+        }
+
+        @media (min-width: 768px) {
+          .reservation-page {
+            flex-direction: row;
+          }
+
+          .aside {
+            width: 360px;
+            flex-shrink: 0;
+          }
+
+          .mobile-toggle {
+            display: none;
+          }
+
+          .total-preview {
+            display: none;
+          }
+
+          .room-grid {
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          }
+
+          .form-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .action-row {
+            flex-direction: row;
+            justify-content: space-between;
+          }
+
+          .btn-back {
+            width: auto;
+            min-width: 120px;
+          }
+
+          .btn-submit {
+            width: auto;
+            min-width: 200px;
+          }
+
+          .connector-line {
+            width: 200px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .aside .full-details {
+            display: none;
+          }
+
+          .aside.visible .full-details {
+            display: block;
+            margin-bottom: 12px;
+            animation: fadeInUp 0.4s ease;
+          }
+
+          .aside .total-preview {
+            display: flex;
+          }
+
+          .connector-line {
+            width: 80px;
+          }
+
+          .step-circle {
+            width: 45px;
+            height: 45px;
+            font-size: 16px;
+          }
+
+          .step-label {
+            font-size: 12px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .step-header {
+            padding: 0 10px;
+          }
+
+          .connector-line {
+            width: 60px;
+          }
+
+          .step-circle {
+            width: 40px;
+            height: 40px;
+            font-size: 14px;
+          }
+
+          .heart-icon {
+            font-size: 18px;
+          }
+
+          .step-label-box {
+            top: 50px;
+          }
+
+          .step-label {
+            font-size: 11px;
+          }
+        }
+
+        :global(body.reservation-navbar-black nav),
+        :global(body.reservation-navbar-black .navbar),
+        :global(body.reservation-navbar-black header),
+        :global(body.reservation-navbar-black .header) {
           background-color: #000 !important;
+          color: #fff !important;
+        }
+        
+        :global(body.reservation-navbar-black nav a),
+        :global(body.reservation-navbar-black .navbar a),
+        :global(body.reservation-navbar-black header a),
+        :global(body.reservation-navbar-black .header a) {
           color: #fff !important;
         }
       `}</style>
     </div>
   )
 }
-

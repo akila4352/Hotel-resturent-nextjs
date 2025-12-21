@@ -25,53 +25,6 @@ const Restaurant2 = () => {
 
   return (
     <>
-      {/* Hero Section */}
-      <section style={{
-        position: 'relative',
-        height: '300px', // reduced hero height
-        // use explicit background properties so it's scoped to this section only
-        backgroundImage: "url('/images/background.jpg')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        textAlign: 'center'
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)'
-        }}></div>
-        <div style={{ position: 'relative', zIndex: 1, padding: '0 20px' }}>
-          <h1
-            className="title-underline"
-            style={{
-              fontSize: '3rem',
-              fontWeight: 'bold',
-              marginBottom: '1rem',
-              textTransform: 'uppercase',
-              letterSpacing: '3px'
-            }}
-          >
-            OUR RESTAURANT
-          </h1>
-          <p style={{
-            fontSize: '1.1rem',
-            maxWidth: '800px',
-            margin: '0 auto',
-            lineHeight: '1.6'
-          }}>
-            Hotel Amore has an exotic restaurant. Our exotic restaurant offers a traditional menu where you can choose between Sri Lankan or English Breakfast.
-          </p>
-        </div>
-      </section>
-
       {/* Menu Section */}
       <section style={{ padding: '60px 0', background: 'white' }}>
         <div className='container'>
@@ -182,28 +135,7 @@ const Restaurant2 = () => {
                     {item.description}
                   </p>
                 </div>
-                <div style={{
-                  textAlign: 'right',
-                  minWidth: '100px'
-                }}>
-                  <p style={{
-                    fontSize: '1.3rem',
-                    fontWeight: 'bold',
-                    color: '#d4af37',
-                    marginBottom: '5px'
-                  }}>
-                    ${item.price}
-                  </p>
-                  {item.oldPrice && (
-                    <p style={{
-                      fontSize: '0.9rem',
-                      color: '#999',
-                      textDecoration: 'line-through'
-                    }}>
-                      ${item.oldPrice}
-                    </p>
-                  )}
-                </div>
+                {/* Price section removed */}
               </div>
             ))}
           </div>
@@ -303,18 +235,13 @@ const Restaurant2 = () => {
                   }}>
                     {item.name}
                   </h4>
-                  <p style={{
-                    fontSize: '0.9rem',
-                    color: '#d4af37'
-                  }}>
-                    ${item.price}
-                  </p>
+                  {/* Price removed */}
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </section>
+      </section> 
 
       {/* Responsive Styles */}
       <style jsx>{`

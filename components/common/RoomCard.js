@@ -2,9 +2,11 @@
 "use client"
 import React, { useState } from "react"
 import Image from "next/image"
+import { useRouter } from "next/router";
 
 export const RoomCard = ({ data }) => {
-  const [isHovered, setIsHovered] = useState(false)
+  const [isHovered, setIsHovered] = useState(false);
+  const router = useRouter(); // Add useRouter for navigation
 
   return (
     <div 
@@ -119,25 +121,28 @@ export const RoomCard = ({ data }) => {
             </div>
             
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <button style={{
-                border: '2px solid white',
-                background: 'transparent',
-                color: 'white',
-                padding: '0.6rem 1.6rem',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = 'white';
-                e.target.style.color = 'black';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = 'transparent';
-                e.target.style.color = 'white';
-              }}>
+              <button
+                style={{
+                  border: '2px solid white',
+                  background: 'transparent',
+                  color: 'white',
+                  padding: '0.6rem 1.6rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'white';
+                  e.target.style.color = 'black';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'transparent';
+                  e.target.style.color = 'white';
+                }}
+                onClick={() => router.push('/rooms2')} // Navigate to /rooms2
+              >
                 VIEW DETAIL
               </button>
             </div>

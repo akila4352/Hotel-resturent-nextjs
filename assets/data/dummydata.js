@@ -1,25 +1,40 @@
-import { FaHotel, FaUtensils } from "react-icons/fa"
-import { MdLocalParking } from "react-icons/md"
-import { GiPalmTree } from "react-icons/gi"
- 
+import {
+  FaSuitcase,
+  FaBus,
+  FaMapMarkedAlt,
+  FaBed,
+  FaConciergeBell
+} from "react-icons/fa";
+import { GiPalmTree } from "react-icons/gi";
+
 export const home = [
   {
-    icon: <FaHotel size={25} />,
-    title: "Comfortable Accommodation",
+    icon: <FaSuitcase size={25} />, // Packing Area
+    title: "Packing Area",
   },
   {
-    icon: <MdLocalParking size={25} />,
-    title: "Spacious Parking Area",
+    icon: <FaConciergeBell size={25} />, // Restaurant
+    title: "Restaurant",
   },
   {
-    icon: <GiPalmTree size={25} />,
-    title: "Outdoor Relaxing Area",
+    icon: <FaBus size={25} />, // Transport
+    title: "Transport",
   },
   {
-    icon: <FaUtensils size={25} />,
-    title: "Restaurant & Dining",
+    icon: <GiPalmTree size={25} />, // Beach
+    title: "Beach",
   },
-]
+  {
+    icon: <FaMapMarkedAlt size={25} />, // Nearby Activity
+    title: "Nearby Activity",
+  },
+  {
+    icon: <FaBed size={25} />, // Rooms
+    title: "Rooms",
+  },
+];
+
+
 // assets/data/dummydata.js
 
 // Add this to your existing dummydata.js file
@@ -43,7 +58,7 @@ export const dishdata = [
     price: "62.25",
     oldPrice: "85",
     category: "BREAKFAST",
-    image: "/images/dish1.jpg",
+    image: "/images/dish2.jpg",
     icon: "🥣"
   },
   {
@@ -53,7 +68,7 @@ export const dishdata = [
     price: "45",
     oldPrice: "60",
     category: "BREAKFAST",
-    image: "/images/dish1.jpg",
+    image: "/images/dish3.jpg",
     icon: "🥞"
   },
 
@@ -65,7 +80,7 @@ export const dishdata = [
     price: "120",
     oldPrice: "150",
     category: "LUNCH",
-    image: "/images/dish1.jpg",
+    image: "/images/dish4.jpg",
     icon: "🍗"
   },
   {
@@ -75,7 +90,7 @@ export const dishdata = [
     price: "95",
     oldPrice: "110",
     category: "LUNCH",
-    image: "/images/dish1.jpg",
+    image: "/images/dish5.jpg",
     icon: "🍝"
   },
   {
@@ -85,7 +100,7 @@ export const dishdata = [
     price: "75",
     oldPrice: "90",
     category: "LUNCH",
-    image: "/images/dish1.jpg",
+    image: "/images/dish6.jpg",
     icon: "🍔"
   },
 
@@ -97,7 +112,7 @@ export const dishdata = [
     price: "150",
     oldPrice: "180",
     category: "DINNER",
-    image: "/images/dish1.jpg",
+    image: "/images/dish7.jpg",
     icon: "🥩"
   },
   {
@@ -107,7 +122,7 @@ export const dishdata = [
     price: "200",
     oldPrice: "250",
     category: "DINNER",
-    image: "/images/dish1.jpg",
+    image: "/images/dish8.jpg",
     icon: "🦞"
   },
   {
@@ -117,7 +132,7 @@ export const dishdata = [
     price: "130",
     oldPrice: "160",
     category: "DINNER",
-    image: "/images/dish1.jpg",
+    image: "/images/dish9.jpg",
     icon: "🍛"
   },
 
@@ -129,7 +144,7 @@ export const dishdata = [
     price: "25",
     oldPrice: "35",
     category: "DRINK",
-    image: "/images/dish1.jpg",
+    image: "/images/drink1.jpg",
     icon: "🍹"
   },
   {
@@ -139,7 +154,7 @@ export const dishdata = [
     price: "45",
     oldPrice: "60",
     category: "DRINK",
-    image: "/images/dish1.jpg",
+    image: "/images/drink2.jpg",
     icon: "🍸"
   },
   {
@@ -149,7 +164,27 @@ export const dishdata = [
     price: "15",
     oldPrice: "20",
     category: "DRINK",
-    image: "/images/dish1.jpg",
+    image: "/images/drink3.jpg",
+    icon: "☕"
+  },
+    {
+    id: 12,
+    name: "COFFEE & TEA",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "15",
+    oldPrice: "20",
+    category: "DRINK",
+    image: "/images/drink4.jpg",
+    icon: "☕"
+  },
+    {
+    id: 12,
+    name: "COFFEE & TEA",
+    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    price: "15",
+    oldPrice: "20",
+    category: "DRINK",
+    image: "/images/drink5.jpg",
     icon: "☕"
   }
 ]
@@ -249,7 +284,7 @@ export const roomsdata = [
       "Romantic Ambiance"
     ]
   },{
-    id: 4,
+    id: 5,
     name: "Double Room Non AC",
     startingPrice: "START FROM $10 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
@@ -271,7 +306,7 @@ export const roomsdata = [
     ]
   },
   {
-    id: 4,
+    id: 6,
     name: "Single Room Non AC",
     startingPrice: "START FROM $10 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",

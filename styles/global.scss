@@ -88,7 +88,7 @@
  
 //testimonial
 .testimonial {
-  .card {
+  .card { 
     padding: 20px;
   }
   .cards {
@@ -518,5 +518,6 @@ footer {
 .titleSm,
 .title-logo {
   font-family: 'Playfair Display', 'Georgia', serif;
-  color: #1f1f1f;
+  color: black; // Set title color to black
+  text-shadow: none; // Remove any text shadow if applied
 }

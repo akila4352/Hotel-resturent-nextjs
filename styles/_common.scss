@@ -16,7 +16,7 @@
     font-size: 50px;
   } 
 } 
-.titleSm {
+.titleSm { 
   font-size: $xl-3;
   font-weight: 500;
   letter-spacing: 2px;
@@ -24,12 +24,12 @@
 .title {
   font-size: $xl-5;
   font-weight: 500;
-  background: $gradient2;
-  background-size: 100%;
-  -webkit-background-clip: text;
-  -moz-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -moz-text-fill-color: transparent;
+  color: black; // Set title color to black
+  background: none; // Remove gradient background
+  -webkit-background-clip: unset; // Ensure no background clipping
+  -moz-background-clip: unset;
+  -webkit-text-fill-color: unset; // Ensure text fill is not transparent
+  -moz-text-fill-color: unset;
 }
 .title-bg {
   font-size: 40px;

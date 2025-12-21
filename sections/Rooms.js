@@ -30,7 +30,7 @@ export const rooms = roomdata.slice(0, 6).map((r, i) => ({
     return "double"
   })(),
 }))
-
+ 
 const Rooms = () => {
   const router = useRouter()
   const handleBookRoom = (r) => {

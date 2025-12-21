@@ -29,7 +29,7 @@ function SamplePrevArrow(props) {
     </div>
   )
 }
-
+ 
 const Testimonial = () => {
   const settings = {
     dots: false,

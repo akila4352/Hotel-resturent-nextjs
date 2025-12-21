@@ -97,6 +97,7 @@ const Header = () => {
       {/* 3D text effect styles for navigation links */}
       <style jsx>{`
         :global(header nav a) {
+          font-family: 'Playfair Display', serif;
           text-shadow: 
             1px 1px 0 rgba(0,0,0,0.15),
             2px 2px 0 rgba(0,0,0,0.12),
@@ -109,6 +110,7 @@ const Header = () => {
 
         :global(header nav a:hover),
         :global(header nav a.activeLink) {
+          font-family: 'Playfair Display', serif;
           text-shadow: 
             1px 1px 0 rgba(0,0,0,0.2),
             2px 2px 0 rgba(0,0,0,0.18),
@@ -121,6 +123,7 @@ const Header = () => {
 
         @media (max-width: 768px) {
           :global(header nav a) {
+            font-family: 'Playfair Display', serif;
             text-shadow: 
               1px 1px 0 rgba(0,0,0,0.12),
               2px 2px 0 rgba(0,0,0,0.1),
@@ -130,6 +133,7 @@ const Header = () => {
 
           :global(header nav a:hover),
           :global(header nav a.activeLink) {
+            font-family: 'Playfair Display', serif;
             text-shadow: 
               1px 1px 0 rgba(0,0,0,0.15),
               2px 2px 0 rgba(0,0,0,0.12),
