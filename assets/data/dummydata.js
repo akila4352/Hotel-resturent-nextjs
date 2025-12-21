@@ -720,3 +720,23 @@ export const socialIconLocations = [
     img: '/images/logo.png',
   },
 ];
+export const roomdata1 = [
+  {
+    id: 1,
+    title: "About Image 1",
+    cover: "/images/bed1.jpg",
+    description: "Spacious lobby with modern design."
+  },
+  {
+    id: 2,
+    title: "About Image 2",
+    cover: "/images/Tribbel4.JPG",
+    description: "Relaxing pool area with sunbeds."
+  },
+  {
+    id: 3,
+    title: "About Image 3",
+    cover: "/images/double22.jpeg",
+    description: "Cozy restaurant with local cuisine."
+  }
+];

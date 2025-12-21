@@ -2,11 +2,11 @@
 import React from "react"
 import { Title } from "@/components/common/Title"
 import Image from "next/image"
-import { roomdata } from "@/assets/data/dummydata" // import data to map images
+import { roomdata1 } from "@/assets/data/dummydata" // import about page images
 
 const AboutUs = () => {
-  // build images list from data.js; fallback to /images/bed1.jpg
-  const images = roomdata.slice(0, 3).map((item) => item.cover || "/images/bed1.jpg")
+  // use roomdata1 for about page images
+  const images = roomdata1.map((item) => item.cover || "/images/bed1.jpg")
 
   return (
     <>
