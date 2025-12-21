@@ -142,7 +142,7 @@ const Header = ({ type, selectedProperties = [], triggerBookNow }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [openOptions]);
-
+ 
   // Add effect to close destination input when clicking outside
   useEffect(() => {
     if (!openDestination) return;

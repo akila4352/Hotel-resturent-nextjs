@@ -36,7 +36,7 @@ export default function BookingBox({
     blockedDates.forEach((d) => s.add(d.toISOString().slice(0, 10)))
     return s
   }, [blockedDates])
-
+ 
   // local flag to prevent double-clicks while calendar sync is running
   const [syncing, setSyncing] = useState(false)
 
