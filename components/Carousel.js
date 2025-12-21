@@ -9,7 +9,7 @@ export default function Carousel({ items = [] }) {
 	const [mounted, setMounted] = useState(false);
 	const [imgStatus, setImgStatus] = useState({});
 	const [activeIndex, setActiveIndex] = useState(0);
-	const [captionKey, setCaptionKey] = useState(0);
+	const [captionKey, setCaptionKey] = useState(0); 
 
 	// default slides
 	const defaultSlides = [
@@ -427,4 +427,4 @@ export default function Carousel({ items = [] }) {
  			`}</style>
 		</div>
 	);
-}
+} 

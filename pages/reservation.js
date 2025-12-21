@@ -31,6 +31,15 @@ export default function ReservationPage() {
  
   const totalGuests = Number(adults || 0) + Number(children || 0)
 
+  // per-room-type maximum limits
+  const maxRoomsByType = { triple: 1, double: 4, single: 1 }
+  const getTypeKey = (r) => (r?.type || "").toString().toLowerCase()
+  const countByType = (type, list = selectedRooms) =>
+    list.reduce((s, sr) => (getTypeKey(sr.room) === type ? s + sr.qty : s), 0)
+
+  // inline limit message for room-type caps
+  const [typeLimitMessage, setTypeLimitMessage] = useState(null)
+
   // UI state
   const [step, setStep] = useState(1) // 1 = choose room, 2 = guest details
   // single selectedRoom kept for compatibility with some UI, but main selection is selectedRooms
@@ -64,22 +73,40 @@ export default function ReservationPage() {
   // helpers to manage selectedRooms
   const isRoomSelected = (r) => selectedRooms.some((sr) => String(sr.room.id) === String(r.id))
   const setRoomQty = (roomId, qty) => {
-    setSelectedRooms((prev) =>
-      prev
-        .map((sr) => (String(sr.room.id) === String(roomId) ? { ...sr, qty: Math.max(1, qty) } : sr))
-        .filter(Boolean)
-    )
+    setSelectedRooms((prev) => {
+      const next = prev.map((sr) => {
+        if (String(sr.room.id) !== String(roomId)) return sr
+        const typeKey = getTypeKey(sr.room)
+        const max = maxRoomsByType[typeKey]
+        const others = countByType(typeKey, prev.filter((p) => String(p.room.id) !== String(roomId)))
+        const desired = Math.max(1, qty)
+        const capped = typeof max === "number" ? Math.min(desired, Math.max(0, max - others)) : desired
+        if (desired !== capped) {
+          setTypeLimitMessage({ type: typeKey, msg: `Sorry, we have only ${max} ${typeKey} room${max > 1 ? "s" : ""}.` })
+        } else {
+          setTypeLimitMessage((m) => (m && m.type === typeKey ? null : m))
+        }
+        return capped > 0 ? { ...sr, qty: capped } : sr
+      })
+      return next.filter((sr) => sr.qty > 0)
+    })
   }
   const addRoom = (r) => {
+    const typeKey = getTypeKey(r)
+    const max = maxRoomsByType[typeKey]
+    const current = countByType(typeKey)
+    if (typeof max === "number" && current + 1 > max) {
+      setTypeLimitMessage({ type: typeKey, msg: `Sorry, we have only ${max} ${typeKey} room${max > 1 ? "s" : ""}.` })
+      return
+    }
+    setTypeLimitMessage(null)
     setSelectedRooms((prev) => {
       const found = prev.find((sr) => String(sr.room.id) === String(r.id))
       if (found) return prev
       return [...prev, { room: r, qty: 1 }]
     })
     setSelectedRoom(r)
-    // Immediately proceed to Guest Details (no Continue button needed)
-    setStep(2)
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
+    // removed auto-advance; only the Continue button should proceed
   }
 
   const removeRoom = (r) => {
@@ -234,7 +261,7 @@ export default function ReservationPage() {
         const uid = `res-${Date.now()}@${typeof window !== "undefined" ? window.location.hostname : "example.com"}`
         const dtstart = formatDate(startDateIso)
         const dtend = formatDate(endDateIso) // iCal DTEND is exclusive for DATE values
-
+ 
         const summary = `Reservation: ${guest.firstName || ""} ${guest.lastName || ""}`.trim()
         const description = [
           `Guests: adults=${payload.adults}, children=${payload.children}, rooms=${payload.rooms}`,
@@ -412,6 +439,17 @@ export default function ReservationPage() {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
+  const [includeBreakfast, setIncludeBreakfast] = useState(false);
+
+  const totalPrice = useMemo(() => {
+    const roomPrice = selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0);
+    return roomPrice; // Breakfast price is no longer included in the total
+  }, [selectedRooms]);
+
+  const handleBreakfastChange = (e) => {
+    setIncludeBreakfast(e.target.checked);
+  };
+
   return ( 
     <div className="reservation-page">
       {/* Left summary */}
@@ -484,6 +522,24 @@ export default function ReservationPage() {
             <div className="room-details">
               <div className="row"><div>Space Price</div><div>{selectedRooms.length ? `${selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$` : (selectedRoom ? `${(selectedRoom.price).toFixed(2)}$` : "-")}</div></div>
               <div className="row"><div>Tax</div><div>FREE</div></div>
+              <div className="row">
+                <div>
+                  Breakfast <span style={{ color: "red" }}>*</span>
+                  <small style={{ marginLeft: "8px", color: "#b91c1c", fontSize: "12px" }}>Extra charge</small>
+                </div>
+                <div>
+                  <input
+                    type="checkbox"
+                    checked={includeBreakfast}
+                    onChange={handleBreakfastChange}
+                  />
+                  {includeBreakfast ? "Included" : "Not included"}
+                </div>
+              </div>
+              <div className="row">
+                <div>Total</div>
+                <div>{totalPrice.toFixed(2)}$</div>
+              </div>
             </div>
 
           </div> {/* <-- ensure selected-room is closed BEFORE Continue button */}
@@ -579,13 +635,22 @@ export default function ReservationPage() {
                             <div className="room-actions">
                               {/* toggle add/remove */}
                               {!already ? (
-                                <button onClick={() => addRoom(r)} className="btn small muted">Add</button>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+                                  <button onClick={() => addRoom(r)} className="btn small muted">Add</button>
+                                  {typeLimitMessage && typeLimitMessage.type === getTypeKey(r) && (
+                                    <div style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700, textAlign: "right" }}>
+                                      {typeLimitMessage.msg}
+                                    </div>
+                                  )}
+                                </div>
                               ) : (
-                                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                  <button onClick={() => setRoomQty(r.id, Math.max(1, already.qty - 1))} className="btn small muted">-</button>
-                                  <div style={{ minWidth: 28, textAlign: "center", fontWeight: 800 }}>{already.qty}</div>
-                                  <button onClick={() => setRoomQty(r.id, already.qty + 1)} className="btn small muted">+</button>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
                                   <button onClick={() => removeRoom(r)} className="btn small">Remove</button>
+                                  {typeLimitMessage && typeLimitMessage.type === getTypeKey(r) && (
+                                    <div style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700, textAlign: "right" }}>
+                                      {typeLimitMessage.msg}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               {/* per-card Continue removed — single Continue is now in the summary */}

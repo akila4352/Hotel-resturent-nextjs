@@ -17,6 +17,217 @@ import { ref as dbRef, push } from "firebase/database"
 import BookingBox from "@/components/BookingBox"
 import AboutUs from "@/components/AboutUs"
 
+// Auto-Swapping Icons Component
+const AutoSwapIcons = ({ items }) => {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const itemsPerView = 4
+
+  useEffect(() => {
+    if (isPaused) return
+    
+    const interval = setInterval(() => {
+      setIsAnimating(true)
+      setTimeout(() => {
+        setCurrentIndex((prev) => (prev + 1) % items.length)
+        setIsAnimating(false)
+      }, 300)
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [items.length, isPaused])
+
+  const getVisibleItems = () => {
+    const visible = []
+    for (let i = 0; i < itemsPerView; i++) {
+      visible.push(items[(currentIndex + i) % items.length])
+    }
+    return visible
+  }
+
+  const handlePrev = () => {
+    setIsPaused(true)
+    setIsAnimating(true)
+    setTimeout(() => {
+      setCurrentIndex((prev) => (prev - 1 + items.length) % items.length)
+      setIsAnimating(false)
+      setTimeout(() => setIsPaused(false), 5000)
+    }, 300)
+  }
+
+  const handleNext = () => {
+    setIsPaused(true)
+    setIsAnimating(true)
+    setTimeout(() => {
+      setCurrentIndex((prev) => (prev + 1) % items.length)
+      setIsAnimating(false)
+      setTimeout(() => setIsPaused(false), 5000)
+    }, 300)
+  }
+
+  return (
+    <>
+      <style jsx>{`
+        .auto-swap-container {
+          position: relative;
+          overflow: hidden;
+          padding: 20px 0;
+        }
+
+        .icons-wrapper {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
+          transition: opacity 0.3s ease;
+          opacity: ${isAnimating ? 0.3 : 1};
+        }
+
+        .icon-box {
+          background: white;
+          border: 1px solid #e5e5e5;
+          border-radius: 8px;
+          padding: 30px 20px;
+          text-align: center;
+          transition: all 0.3s ease;
+          min-height: 200px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .icon-box:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+          border-color: #d4af37;
+        }
+
+        .icon-box .icon {
+          font-size: 48px;
+          color: #d4af37;
+          margin-bottom: 20px;
+          display: block;
+        }
+
+        .icon-box h3 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin: 0;
+        }
+
+        .nav-button {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          background: white;
+          border: 2px solid #d4af37;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          z-index: 10;
+        }
+
+        .nav-button:hover {
+          background: #d4af37;
+          color: white;
+        }
+
+        .nav-button.prev {
+          left: 10px; /* Adjusted from -25px */
+        }
+
+        .nav-button.next {
+          right: 10px; /* Adjusted from -25px */
+        }
+
+        .nav-button svg {
+          width: 24px;
+          height: 24px;
+        }
+
+        @media (max-width: 1024px) {
+          .icons-wrapper {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+
+        @media (max-width: 768px) {
+          .icons-wrapper {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+          }
+
+          .icon-box {
+            padding: 20px 15px;
+            min-height: 150px;
+          }
+
+          .icon-box .icon {
+            font-size: 36px;
+          }
+
+          .icon-box h3 {
+            font-size: 16px;
+          }
+
+          .nav-button {
+            width: 40px;
+            height: 40px;
+          }
+
+          .nav-button.prev {
+            left: 5px; /* Adjusted from -15px */
+          }
+
+          .nav-button.next {
+            right: 5px; /* Adjusted from -15px */
+          }
+        }
+
+        @media (max-width: 480px) {
+          .icons-wrapper {
+            grid-template-columns: 1fr;
+          }
+
+          .nav-button {
+            display: none;
+          }
+        }
+      `}</style>
+
+      <div className="auto-swap-container">
+        <button className="nav-button prev" onClick={handlePrev} aria-label="Previous">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+
+        <div className="icons-wrapper">
+          {getVisibleItems().map((item, i) => (
+            <div className="icon-box" key={`${currentIndex}-${i}`}>
+              <span className="icon">{item.icon}</span>
+              <h3>{item.title}</h3>
+            </div>
+          ))}
+        </div>
+
+        <button className="nav-button next" onClick={handleNext} aria-label="Next">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+      </div>
+    </>
+  )
+}
+
 const Hero = () => {
   const router = useRouter() 
  
@@ -65,7 +276,7 @@ const Hero = () => {
   const handleRoomType = (type) => {
     setOptions((prev) => ({ ...prev, roomType: type }))
   }
-
+ 
   const handleBookNow = async () => {
     if (submitting) return
     setSubmitting(true)
@@ -250,18 +461,10 @@ const Hero = () => {
           <div className='heading-title'>
             <Title title='Why Book Direct with us' />
           </div>
-          <div className='hero-content grid-4'>
-            {home.map((item, i) => (
-              <div className='box' key={i}>
-                <span className='green'>{item.icon}</span> <br />
-                <br />
-                <h3>{item.title}</h3>
-              </div>
-            ))}
-          </div>
+          <AutoSwapIcons items={home} />
         </div>
       </section>
-
+ 
       <Expertise />
       <AboutUs />
       <Testimonial />
