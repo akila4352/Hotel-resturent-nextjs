@@ -6,8 +6,32 @@ import { BsFacebook } from "react-icons/bs"
 import { AiFillInstagram } from "react-icons/ai"
 import { FaAirbnb, FaTripadvisor } from "react-icons/fa"
 import { FaXTwitter } from "react-icons/fa6"
+import { useState } from "react";
+import { rtdb } from "../../lib/firebase";
+import { ref, push, serverTimestamp } from "firebase/database";
 
 const Footer = () => {
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus("");
+    if (!message.trim()) {
+      setStatus("Please enter a message.");
+      return;
+    }
+    try {
+      await push(ref(rtdb, "newsletterMessages"), {
+        message,
+        createdAt: Date.now(),
+      });
+      setStatus("Message sent!");
+      setMessage("");
+    } catch (error) {
+      setStatus("Failed to send. Try again.");
+    }
+  };
   return (
     <>
       {/* Google Map Section */}
@@ -134,12 +158,13 @@ const Footer = () => {
             </svg>
           </div>
           
-          <form className="newsletter-form">
+          <form className="newsletter-form" onSubmit={handleSubmit}>
             <input 
-              type="email" 
-              placeholder="Your email address" 
+              type="text" 
+              placeholder="Send your message" 
               className="newsletter-input"
-              required
+              value={message}
+              onChange={e => setMessage(e.target.value)}
             />
             <button type="submit" className="newsletter-submit">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -147,6 +172,11 @@ const Footer = () => {
               </svg>
             </button>
           </form>
+          {status && (
+            <div style={{ color: status === "Message sent!" ? "#c9a961" : "#ff6b6b", marginTop: 8, fontSize: 14 }}>
+              {status}
+            </div>
+          )}
 
           <div className="social-icons">
             <Link href='https://twitter.com' target='_blank' className="social-link">

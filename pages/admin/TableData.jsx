@@ -12,29 +12,49 @@ import { rtdb } from "../../lib/firebase"
 
 const TableData = () => {
   const [bookings, setBookings] = useState([])
+  const [messages, setMessages] = useState([])
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    const fetchReservations = async () => {
       try {
         const dbRef = ref(rtdb)
-        const hotelSnap = await get(child(dbRef, "hotelBookings"))
-        if (hotelSnap.exists()) {
-          const bookingsObj = hotelSnap.val()
-          // Convert object to array with id
-          const bookingsArr = Object.entries(bookingsObj).map(([id, data]) => ({
+        const resSnap = await get(child(dbRef, "reservations"))
+        if (resSnap.exists()) {
+          const reservationsObj = resSnap.val()
+          const reservationsArr = Object.entries(reservationsObj).map(([id, data]) => ({
             id,
             ...data,
           }))
-          setBookings(bookingsArr)
+          setBookings(reservationsArr)
         } else {
           setBookings([])
         }
       } catch (err) {
-        console.error("Error fetching hotel bookings:", err)
+        console.error("Error fetching reservations:", err)
       }
     }
 
-    fetchBookings()
+    const fetchMessages = async () => {
+      try {
+        const dbRef = ref(rtdb)
+        const msgSnap = await get(child(dbRef, "newsletterMessages"))
+        if (msgSnap.exists()) {
+          const messagesObj = msgSnap.val()
+          const messagesArr = Object.entries(messagesObj).map(([id, data]) => ({
+            id,
+            ...data,
+          }))
+          setMessages(messagesArr)
+        } else {
+          setMessages([])
+        }
+      } catch (err) {
+        console.error("Error fetching newsletter messages:", err)
+      }
+    }
+
+    fetchReservations()
+    fetchMessages()
   }, [])
 
   return (
@@ -43,11 +63,27 @@ const TableData = () => {
         <div className='user cardBox'>
           <Common title='Messages' />
           <div className='userBox'>
-            {/* User inbox or other content can go here */}
+            {messages.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#aaa', padding: '1rem' }}>No messages found.</div>
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {messages.map((msg) => (
+                  <li key={msg.id} style={{ borderBottom: '1px solid #444', padding: '0.5rem 0', color: '#fff' }}>
+                    <div><strong>Email:</strong> {msg.email || '-'}</div>
+                    {msg.message && <div><strong>Message:</strong> {msg.message}</div>}
+                    {msg.createdAt &&
+                      typeof msg.createdAt === 'string' &&
+                      isNaN(Number(msg.createdAt)) && (
+                        <div style={{ fontSize: '0.85em', color: '#888' }}>{msg.createdAt}</div>
+                      )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
         <div className='table cardBox'>
-          <Common title='Hotel Bookings' />
+          <Common title='Reservations' />
           <div className='tableBox'>
             <TableContainer
               component={Paper}
@@ -68,12 +104,12 @@ const TableData = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>ID</TableCell>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Room</TableCell>
+                    <TableCell>Guest Name</TableCell>
+                    <TableCell>Room(s)</TableCell>
                     <TableCell>Check-in</TableCell>
                     <TableCell>Check-out</TableCell>
-                    <TableCell>Price</TableCell>
-                    <TableCell>Status</TableCell>
+                    <TableCell>Adults</TableCell>
+                    <TableCell>Children</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -87,12 +123,16 @@ const TableData = () => {
                     bookings.map((b) => (
                       <TableRow key={b.id}>
                         <TableCell>{b.id}</TableCell>
-                        <TableCell>{b.name || "-"}</TableCell>
-                        <TableCell>{b.room || "-"}</TableCell>
-                        <TableCell>{b.checkIn || "-"}</TableCell>
-                        <TableCell>{b.checkOut || "-"}</TableCell>
-                        <TableCell>{b.price ? `Rs. ${b.price}` : "-"}</TableCell>
-                        <TableCell>{b.status || "-"}</TableCell>
+                        <TableCell>{b.guest ? `${b.guest.firstName || ''} ${b.guest.lastName || ''}`.trim() : '-'}</TableCell>
+                        <TableCell>
+                          {Array.isArray(b.selectedRooms)
+                            ? b.selectedRooms.map((r, i) => `${r.title} x${r.qty}`).join(', ')
+                            : b.selectedRooms && b.selectedRooms.title ? `${b.selectedRooms.title} x1` : '-'}
+                        </TableCell>
+                        <TableCell>{b.checkIn || '-'}</TableCell>
+                        <TableCell>{b.checkOut || '-'}</TableCell>
+                        <TableCell>{b.adults ?? '-'}</TableCell>
+                        <TableCell>{b.children ?? '-'}</TableCell>
                       </TableRow>
                     ))
                   )}
