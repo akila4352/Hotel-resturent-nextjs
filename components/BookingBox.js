@@ -49,7 +49,7 @@ export default function BookingBox({
       // defensive: if setOpenDate not provided, ignore
       console.warn("setOpenDate unavailable", e)
     }
-  }
+  } 
 
   // parse simple iCal: extract DTSTART/DTEND from VEVENTs (supports YYYYMMDD and YYYYMMDDTHHMMSSZ)
   const parseICal = async (text) => {

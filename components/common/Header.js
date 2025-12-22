@@ -70,7 +70,7 @@ const Header = () => {
            </div>
           <nav className={open ? "openMenu" : "closeMenu"} onClick={() => setOpen(false)}>
              <Link href='/' className={activeLink == "/" ? "activeLink" : "none"}>
-               Home
+               HOME
              </Link>
              <Link href='/rooms2' className={activeLink == "/rooms2" ? "activeLink" : "none"}>
                ROOMS
@@ -83,7 +83,7 @@ const Header = () => {
                NEAR BY PLACES
              </Link>
              <Link href='/blogs' className={activeLink == "/blogs" ? "activeLink" : "none"}>
-               Contact
+               CONTACT
              </Link>
          
             

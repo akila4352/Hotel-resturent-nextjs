@@ -5,4 +5,144 @@
 @import "function";
 @import "header";
 @import "global";
-  
+// Add this at the very top of your main.scss
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@200;300;400;600;700;900&display=swap");
+
+.bodyadmin {
+  font-family: "Source Sans Pro", sans-serif;
+  background-color: #282e38;
+  min-height: 100vh;
+  width: 100vw;
+
+  * {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  .container {
+    max-width: 85%;
+    margin: auto;
+  }
+  .flexSB {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .flexCenter {
+    display: flex;
+    align-items: center;
+  }
+  .imageCircle {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  button,
+  input {
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    color: #fff;
+  }
+  a {
+    text-decoration: none;
+  }
+  ul,
+  li {
+    list-style-type: none;
+  }
+  .heading {
+    padding: 20px 0;
+    h3 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f7f7f7;
+    }
+    span {
+      word-spacing: 10px;
+      color: #f7f7f7;
+    }
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-gap: 30px;
+  }
+  .cardBox {
+    background-color: #313844;
+    border-radius: 5px;
+    padding: 20px;
+  }
+  .cardHeading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #dee2e6;
+    h3 {
+      color: #f7f7f7;
+      font-weight: 600;
+      font-size: 18px;
+    }
+  }
+  .row {
+    width: 50%;
+  }
+  .batch {
+    background: #10c469;
+    width: 65px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+  }
+  .batch1 {
+    background: #ff8acc;
+  }
+  .progress {
+    background-color: #2a544b;
+    border-radius: 20px;
+    position: relative;
+    margin: 45px 0 0 0;
+    height: 7px;
+    width: 90%;
+  }
+  .progress-done {
+    background-color: #38d16a;
+    border-radius: 20px;
+    color: #fff;
+    height: 100%;
+    width: 0;
+    opacity: 0;
+    transition: 1s ease 0.3s;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-gap: 30px;
+  }
+  /*-------------light-mode---------------------*/
+  &.light {
+    background-color: #ebeff2;
+    .cardBox {
+      background-color: #fff;
+      box-shadow: 0 0.75rem 6rem rgba(56, 65, 74, 0.03);
+    }
+    .heading span,
+    .heading h3,
+    .cardHeading {
+      color: #000;
+    }
+  }
+  /*-------------light-mode---------------------*/
+  @media only screen and (max-width: 768px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .grid2 {
+      grid-template-columns: repeat(1, 1fr);
+    }
+  }
+}
