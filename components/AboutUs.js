@@ -16,7 +16,7 @@ const AboutUs = () => {
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <Title title='About Us' />
           </div>
-
+ 
           {/* Content */}
           <div style={{
             maxWidth: '900px',

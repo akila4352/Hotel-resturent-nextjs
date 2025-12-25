@@ -8,7 +8,7 @@ export default function RestaurantPage() {
       <Head>
         <title>AMORE - Restaurant</title>
       </Head>
-      <BlogHero
+      <BlogHero 
         videoUrl="https://media.istockphoto.com/id/1370288288/video/empty-tables-and-chairs-in-restaurant-stock-video.mp4?s=mp4-640x640-is&k=20&c=vyxtsnXtrk9OIt9A9JoXGdUSogkhQ5IrL1dfG6pOCzE="
         title="AMORE HOTEL"
         subtitle="RESTAURANT"

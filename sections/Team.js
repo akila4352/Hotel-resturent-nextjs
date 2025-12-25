@@ -15,7 +15,7 @@ const RestaurantShowcase = () => {
             {/* Short description for the showcase */}
             <p className="lead">
               Explore our curated selection of chefs and signature dishes highlighting Sri Lanka's rich culinary heritage.
-            </p>
+            </p> 
           </div>
           <div className='grid-4 py'>
             {teamdata.map((item) => (

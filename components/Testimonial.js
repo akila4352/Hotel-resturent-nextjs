@@ -17,7 +17,7 @@ function SampleNextArrow(props) {
       </button>
     </div>
   )
-}
+} 
 
 function SamplePrevArrow(props) {
   const { onClick } = props

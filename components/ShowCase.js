@@ -17,7 +17,7 @@ const getIcon = (cat) => {
   if (c.includes("safari")) return <GiElephant size={28} />
   return <FaShip size={24} />
 }
-
+ 
 const ShowCase = () => {
   // add refs for each card wrapper
   const cardRefs = useRef([])

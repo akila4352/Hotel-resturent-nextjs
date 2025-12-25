@@ -163,7 +163,7 @@ const Header = ({ type, selectedProperties = [], triggerBookNow }) => {
         className={
           type === "list" ? "headerContainer listMode" : "headerContainer"
         }
-      >
+      > 
         {type !== "list" && (
           <>
             <h1

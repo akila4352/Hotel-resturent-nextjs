@@ -19,6 +19,6 @@ const rooms2 = () => {
       <Rooms2 />
     </>
   )
-}
+} 
 
 export default rooms2

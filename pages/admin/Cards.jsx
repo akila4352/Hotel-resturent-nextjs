@@ -5,10 +5,11 @@ import Common from "./Common";
 import { ref, get, child } from "firebase/database";
 import { rtdb } from "../../lib/firebase";
 
-const Cards = () => {
+
+const Cards = ({ reservationCount }) => {
   const [stats, setStats] = useState({
     earnings: 0,
-    bookings: 0,
+    reservations: 0,
     availableRooms: 0,
   });
 
@@ -17,15 +18,16 @@ const Cards = () => {
       try {
         const dbRef = ref(rtdb);
 
-        // Fetch hotel bookings
-        const hotelSnap = await get(child(dbRef, "hotelBookings"));
+        // Fetch reservations and sum totalPrice for earnings
+        const resSnap = await get(child(dbRef, "reservations"));
         let earnings = 0;
-        let bookings = 0;
-        if (hotelSnap.exists()) {
-          const bookingsObj = hotelSnap.val();
-          bookings = Object.keys(bookingsObj).length;
-          // Assume each booking has a 'price' field
-          earnings = Object.values(bookingsObj).reduce((sum, b) => sum + (b.price ? Number(b.price) : 0), 0);
+        if (resSnap.exists()) {
+          const reservationsObj = resSnap.val();
+          earnings = Object.values(reservationsObj).reduce((sum, b) => {
+            if (typeof b.totalPrice === 'number') return sum + b.totalPrice;
+            if (typeof b.totalPrice === 'string' && !isNaN(Number(b.totalPrice))) return sum + Number(b.totalPrice);
+            return sum;
+          }, 0);
         }
 
         // Fetch today's available rooms
@@ -39,7 +41,7 @@ const Cards = () => {
 
         setStats({
           earnings,
-          bookings,
+          reservations: reservationCount,
           availableRooms,
         });
       } catch (err) {
@@ -48,7 +50,7 @@ const Cards = () => {
     };
 
     fetchStats();
-  }, []);
+  }, [reservationCount]);
 
   // Chart configs
   const earningsData = {
@@ -61,12 +63,12 @@ const Cards = () => {
     },
   };
 
-  const bookingsData = {
-    series: [stats.bookings],
+  const reservationsData = {
+    series: [stats.reservations],
     options: {
       chart: { type: "radialBar" },
       plotOptions: { radialBar: { hollow: { size: "58%" }, dataLabels: { value: { show: true } } } },
-      labels: ["Bookings"],
+      labels: ["Reservations"],
       colors: ["#2196F3"],
     },
   };
@@ -90,37 +92,26 @@ const Cards = () => {
             <ReactApexChart options={earningsData.options} series={earningsData.series} type="radialBar" height={150} />
           </div>
           <div className="title row">
-            <h1>Rs. {stats.earnings}</h1>
+            <h1>USD {stats.earnings}</h1>
             <p>Earnings</p>
           </div>
         </div>
       </div>
 
       <div className="cardBox">
-        <Common title="Total Bookings" />
+        <Common title="Total Reservations" />
         <div className="circle">
           <div className="row">
-            <ReactApexChart options={bookingsData.options} series={bookingsData.series} type="radialBar" height={150} />
+            <ReactApexChart options={reservationsData.options} series={reservationsData.series} type="radialBar" height={150} />
           </div>
           <div className="title row">
-            <h1>{stats.bookings}</h1>
-            <p>Bookings</p>
+            <h1>{stats.reservations}</h1>
+            <p>Reservations</p>
           </div>
         </div>
       </div>
 
-      <div className="cardBox">
-        <Common title="Today's Available Rooms" />
-        <div className="circle">
-          <div className="row">
-            <ReactApexChart options={roomsData.options} series={roomsData.series} type="radialBar" height={150} />
-          </div>
-          <div className="title row">
-            <h1>{stats.availableRooms}</h1>
-            <p>Rooms</p>
-          </div>
-        </div>
-      </div>
+      {/* Removed Today's Available Rooms card as requested */}
     </section>
   );
 };

@@ -74,7 +74,7 @@ const Rooms = () => {
                   >
                     Book this room
                   </button>
-                </div>
+                </div> 
               </div>
             ))}
           </div>

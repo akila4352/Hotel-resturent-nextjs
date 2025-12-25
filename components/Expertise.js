@@ -18,7 +18,7 @@ const Expertise = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> 
 
       <style jsx>{`
         .rooms-grid {

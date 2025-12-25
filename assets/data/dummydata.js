@@ -726,7 +726,7 @@ export const roomdata1 = [
     title: "About Image 1",
     cover: "/images/bed1.jpg",
     description: "Spacious lobby with modern design."
-  },
+  }, 
   {
     id: 2,
     title: "About Image 2",

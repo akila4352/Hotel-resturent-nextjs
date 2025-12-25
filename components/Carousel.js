@@ -10,7 +10,7 @@ export default function Carousel({ items = [] }) {
 	const [imgStatus, setImgStatus] = useState({});
 	const [activeIndex, setActiveIndex] = useState(0);
 	const [captionKey, setCaptionKey] = useState(0); 
-
+ 
 	// default slides
 	const defaultSlides = [
 		{ img: "/images/b3.jpg", title: "Hotel Amore", subtitle: "Relax, Dine & Rejuvenate", btn1: "Book Now", btn2: "Learn More", navigatePath: "/" },

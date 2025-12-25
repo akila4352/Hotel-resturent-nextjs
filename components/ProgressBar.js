@@ -20,7 +20,7 @@ export default function ProgressBar({ currentStep = 1 }) {
               <div className="pb-label">{label}</div>
             </div>
           )
-        })}
+        })} 
       </div>
       <style jsx>{`
         .pb-root {

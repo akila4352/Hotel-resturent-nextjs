@@ -17,7 +17,7 @@ export default function BookingBox({
   handleRoomType,
   handleBookNow,
   submitting,
-  forceStatic = false,
+  forceStatic = false,   
 }) {
   const router = useRouter()
   const formattedDate = (d) => (d ? format(d, "dd LLL yyyy").toUpperCase() : "")

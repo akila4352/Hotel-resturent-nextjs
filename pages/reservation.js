@@ -136,24 +136,43 @@ export default function ReservationPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!selectedRoom) {
-      alert("Please select a room before booking.")
-      return
+    // Input validation 
+    const errors = [];
+    if (!selectedRoom && selectedRooms.length === 0) {
+      errors.push("Please select a room before booking.");
     }
-
     if (!ci || !co) {
-      alert("Please select valid check-in and check-out dates.")
-      return
+      errors.push("Please select valid check-in and check-out dates.");
+    }
+    if (!form.country) errors.push("Country is required.");
+    if (!form.mobile || !/^\+?\d{7,15}$/.test(form.mobile)) errors.push("Valid mobile number is required.");
+    if (!form.firstName) errors.push("First name is required.");
+    if (!form.address) errors.push("Address is required.");
+    if (!form.city) errors.push("City is required.");
+    if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email)) errors.push("Valid email address is required.");
+    if (!form.agree) errors.push("You must agree to the terms and conditions.");
+
+    const suitability = multiSuitability();
+    if (!suitability.ok) {
+      errors.push(suitability.reason + ". Please add more rooms.");
     }
 
-    const suitability = multiSuitability()
-    if (!suitability.ok) {
-      alert(suitability.reason + ". Please add more rooms.")
-      return
+    if (errors.length > 0) {
+      alert(errors.join("\n"));
+      return;
     }
 
     setSubmitting(true)
     try {
+      // Calculate room numbers and total price
+      const bookedRooms = selectedRooms.length
+        ? selectedRooms
+        : selectedRoom
+        ? [{ room: selectedRoom, qty: 1 }]
+        : [];
+      const roomNumbers = bookedRooms.map((sr) => sr.room.id);
+      const totalPriceValue = (bookedRooms.reduce((sum, sr) => sum + ((sr.room.price || 0) * sr.qty), 0) + (breakfastType ? totalGuests * breakfastPrices[breakfastType] : 0)) * nights;
+
       const payload = {
         checkIn: ci ? ci.toISOString().slice(0, 10) : checkIn || "",
         checkOut: co ? co.toISOString().slice(0, 10) : checkOut || "",
@@ -162,11 +181,7 @@ export default function ReservationPage() {
         children: Number(children || 0),
         rooms: Number(rooms || 0),
         totalGuests,
-        selectedRooms: selectedRooms.length
-          ? selectedRooms.map((sr) => ({ id: sr.room.id, title: sr.room.title, price: sr.room.price || 0, qty: sr.qty }))
-          : selectedRoom
-          ? [{ id: selectedRoom.id, title: selectedRoom.title, price: selectedRoom.price || 0, qty: 1 }]
-          : null,
+        selectedRooms: bookedRooms.map((sr) => ({ id: sr.room.id, title: sr.room.title, price: sr.room.price || 0, qty: sr.qty })),
         guest: {
           country: form.country,
           mobile: form.mobile,
@@ -179,6 +194,8 @@ export default function ReservationPage() {
         },
         createdAt: new Date().toISOString(),
         timestamp: Date.now(),
+        roomNumbers, // array of room numbers
+        totalPrice: totalPriceValue, // total price for the booking
       }
 
       await push(dbRef(rtdb, "reservations"), payload)

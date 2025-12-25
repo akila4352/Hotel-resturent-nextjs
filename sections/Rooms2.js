@@ -20,7 +20,7 @@ const Rooms = () => {
         setImageIndexes(prev => ({
           ...prev,
           [room.id]: nextIndex
-        }))
+        })) 
 
         setSelectedImages(prev => ({
           ...prev,

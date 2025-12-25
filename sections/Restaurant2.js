@@ -153,7 +153,7 @@ const Restaurant2 = () => {
             textTransform: 'uppercase',
             letterSpacing: '2px'
           }}>
-            GALLERY RESTAURANT
+            GALLERY RESTAURANT 
           </h2>
 
           {/* Gallery Filter Tabs */}
