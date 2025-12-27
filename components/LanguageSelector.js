@@ -1,9 +1,22 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ReactCountryFlag from 'react-country-flag'
 
 export default function LanguageSelector() {
   const [isOpen, setIsOpen] = useState(false)
   const [currentLang, setCurrentLang] = useState('en')
+  const ref = useRef(null)
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClick(event) {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [isOpen])
 
   const languages = [
     { code: 'en', name: 'English', country: 'GB' },
@@ -35,18 +48,19 @@ export default function LanguageSelector() {
   const currentLanguage = languages.find(lang => lang.code === currentLang)
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} ref={ref}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={styles.button}
+        className="lang-switch-btn"
       >
         <ReactCountryFlag
           svg
           countryCode={currentLanguage?.country}
           style={styles.flag}
         />
-        <span style={styles.langName}>{currentLanguage?.name}</span>
-        <span style={styles.arrow}>{isOpen ? '▲' : '▼'}</span>
+        <span style={styles.langName} className="lang-name">{currentLanguage?.name}</span>
+        <span style={styles.arrow} className="lang-arrow">{isOpen ? '▲' : '▼'}</span>
       </button>
 
       {isOpen && (
@@ -174,4 +188,18 @@ const styles = {
     `,
     transition: 'all 0.3s ease',
   },
+}
+
+// Add this at the end of the file:
+if (typeof window !== "undefined") {
+  const style = document.createElement("style");
+  style.innerHTML = `
+    @media (max-width: 768px) {
+      .lang-switch-btn .lang-name,
+      .lang-switch-btn .lang-arrow {
+        display: none !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
 }

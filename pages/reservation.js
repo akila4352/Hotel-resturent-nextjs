@@ -30,7 +30,7 @@ export default function ReservationPage() {
  
   const totalGuests = Number(adults || 0) + Number(children || 0)
 
-  const maxRoomsByType = { triple: 1, double: 4, single: 1 }
+  const maxRoomsByType = { room1: 1, room2: 4, room3: 4, room4: 4, room5: 4, room6: 1 }
   const getTypeKey = (r) => (r?.type || "").toString().toLowerCase()
   const countByType = (type, list = selectedRooms) =>
     list.reduce((s, sr) => (getTypeKey(sr.room) === type ? s + sr.qty : s), 0)
@@ -158,7 +158,7 @@ export default function ReservationPage() {
     }
 
     if (errors.length > 0) {
-      alert(errors.join("\n"));
+      alert(errors.join("\n")); 
       return;
     }
 
@@ -439,7 +439,9 @@ export default function ReservationPage() {
           <div className="selected-room">
             {selectedRooms.length === 0 ? (
               <div className="empty-state">
-                <div className="room-title">{selectedRoom?.title || "No room selected"}</div>
+                <div className="room-title">
+                  {selectedRoom ? `ROOM-${selectedRoom.roomNumber || selectedRoom.id}. ${selectedRoom.title}` : "No room selected"}
+                </div>
                 <div className="room-price">Price per night: {selectedRoom ? `${selectedRoom.price}$` : "-"}</div>
               </div>
             ) : (
@@ -449,7 +451,7 @@ export default function ReservationPage() {
                     <div key={sr.room.id} className="room-item" style={{animationDelay: `${idx * 0.1}s`}}>
                       <div className="room-info">
                         <div className="room-title-line">
-                          ROOM-{sr.room.id}. {sr.room.title}
+                          ROOM-{sr.room.roomNumber || sr.room.id}. {sr.room.title}
                           <span className="qty-badge">×{sr.qty}</span>
                         </div>
                         <div className="room-meta-line">{formatRoomMeta(sr.room)}</div>
@@ -565,7 +567,7 @@ export default function ReservationPage() {
                           </div>
                           <div className="room-content">
                             <div className="room-header">
-                              <div className="room-name">ROOM-{r.id}. {r.title}</div>
+                              <div className="room-name">ROOM-{r.roomNumber || r.id}. {r.title}</div>
                               <div className="room-rate">${r.price} / night</div>
                             </div>
                             <div className="room-meta">{formatRoomMeta(r)}</div>

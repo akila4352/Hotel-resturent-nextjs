@@ -195,7 +195,8 @@ export const dishdata = [
 export const roomsdata = [
   {
     id: 1,
-    name: "Triple Room AC",
+    name: "ROOM-1. Family Room",
+    roomNumber: 1,
     startingPrice: "START FROM $30 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
     image: "/images/bed3.JPG",
@@ -219,7 +220,8 @@ export const roomsdata = [
   },
   {
     id: 2,
-    name: "Double Room AC",
+    name: "ROOM-2. Antik room",
+    roomNumber: 2,
     startingPrice: "START FROM $20 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
     image: "/images/bed2.jpg",
@@ -242,7 +244,8 @@ export const roomsdata = [
   },
   {
     id: 3,
-    name: "Double ROOM",
+    name: "ROOM-3. Relax Deluxe",
+    roomNumber: 3,
     startingPrice: "START FROM $20 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
     image: "/images/double21.jpeg",
@@ -264,7 +267,8 @@ export const roomsdata = [
   },
   {
     id: 4,
-    name: "Double Room AC",
+    name: "ROOM-4. Deluxe room",
+    roomNumber: 4,
     startingPrice: "START FROM $20 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
     image: "/images/double32.jpeg",
@@ -285,7 +289,8 @@ export const roomsdata = [
     ]
   },{
     id: 5,
-    name: "Double Room Non AC",
+    name: "ROOM-5. No Air Conditioning With Fan",
+    roomNumber: 5,
     startingPrice: "START FROM $10 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
     image:  "/images/double42.jpeg",
@@ -307,7 +312,8 @@ export const roomsdata = [
   },
   {
     id: 6,
-    name: "Single Room Non AC",
+    name: "ROOM-6. Non Air conditioning With Fan",
+    roomNumber: 6,
     startingPrice: "START FROM $10 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
     image:  "/images/single11.JPG",
@@ -333,7 +339,8 @@ export const roomsdata = [
 export const expertise = [
   {
     id: 1,
-    title: "Trible room AC",
+    title: "ROOM-1. Family Room",
+    roomNumber: 1,
     price: "30",
     cover: "/images/Tribbel2.JPG",
     coverHover: "/images/Tribbel2.JPG", // <-- updated
@@ -343,7 +350,8 @@ export const expertise = [
     bed: "King & Double"
   },{
     id: 2,
-    title: "Double Room AC",
+    title: "ROOM-2. Antik room",
+    roomNumber: 2,
     price: "33.99",
     cover: "/images/double13.jpg",
     coverHover: "/images/double13.jpg", // <-- updated
@@ -353,7 +361,8 @@ export const expertise = [
     bed: "King Size"
   },{
     id: 3,
-    title: "Double Room AC",
+    title: "ROOM-3. Relax Deluxe",
+    roomNumber: 3,
     price: "33.99",
     cover: "/images/double21.jpeg",
     coverHover: "/images/double21.jpeg", // <-- updated
@@ -363,7 +372,8 @@ export const expertise = [
     bed: "King Size"
   },{
     id: 4,
-    title: "Double Room AC",
+    title: "ROOM-4. Deluxe room",
+    roomNumber: 4,
     price: "33.99",
     cover: "/images/double32.jpeg",
     coverHover: "/images/double32.jpeg", // <-- updated
@@ -374,7 +384,8 @@ export const expertise = [
   },
   {
     id: 5,
-    title: "Double Room Non-AC",
+    title: "ROOM-5. No Air Conditioning With Fan",
+    roomNumber: 5,
     price: "33.99",
     cover: "/images/double41.jpeg",
     coverHover: "/images/double41.jpeg", // <-- updated
@@ -385,7 +396,8 @@ export const expertise = [
   },
   {
     id: 6,
-    title: "Single Room Non-AC",
+    title: "ROOM-6. Non Air conditioning With Fan",
+    roomNumber: 6,
     price: "33.99",
     cover: "/images/single12.JPG",
     coverHover: "/images/single12.JPG", // <-- updated
@@ -574,9 +586,10 @@ export const teamdata = [
 export const roomdata = [
   {
     id: 1,
-    title: "Triple Room AC",
-    cover: "/images/bed1.jpg",
-    coverHover: "/images/bed2.jpg",
+    title: "Family Room",
+    roomNumber: 1,
+    cover: "/images/Tribbel1.JPG",
+    coverHover: "/images/Tribbel1.JPG",
     post: "AC · King Bed", // removed "· Sea View"
     ac: true,
     minAdults: 2,
@@ -586,9 +599,10 @@ export const roomdata = [
   },
   {
     id: 2,
-    title: "Double Room AC",
-    cover: "/images/bed2.jpg",
-    coverHover: "/images/bed1.jpg",
+    title: "Antik room",
+    roomNumber: 2,
+    cover: "/images/double15.jpeg",
+    coverHover: "/images/double15.jpeg",
     post: "AC · Double Bed · Work Desk",
     ac: true,
     minAdults: 1,
@@ -598,9 +612,10 @@ export const roomdata = [
   },
   {
     id: 3,
-    title: "Double Room AC",
-    cover: "/images/bed3.jpg",
-    coverHover: "/images/bed1.jpg",
+    title: "Relax Deluxe",
+    roomNumber: 3,
+    cover: "/images/double41.jpeg",
+    coverHover: "/images/double41.jpeg",
     post: "AC · Twin Beds · Balcony",
     ac: true,
     minAdults: 1,
@@ -610,7 +625,8 @@ export const roomdata = [
   },
   {
     id: 4,
-    title: "Double Room Non-AC",
+    title: "Deluxe room",
+    roomNumber: 4,
     cover: "/images/bed4.jpg",
     coverHover: "/images/bed1.jpg",
     post: "Non-AC · Twin Beds",
@@ -622,9 +638,10 @@ export const roomdata = [
   },
   {
     id: 5,
-    title: "Double Room AC",
-    cover: "/images/bed1.jpg",
-    coverHover: "/images/bed2.jpg",
+    title: "No Air Conditioning With Fan",
+    roomNumber: 5,
+    cover: "/images/double41.jpeg",
+    coverHover: "/images/double41.jpeg",
     post: "AC · Queen Bed · City View",
     ac: true,
     minAdults: 1,
@@ -634,9 +651,10 @@ export const roomdata = [
   },
   {
     id: 6,
-    title: "Single Room Non-AC",
-    cover: "/images/bed2.jpg",
-    coverHover: "/images/bed1.jpg",
+    title: "Non Air conditioning With Fan",
+    roomNumber: 6,
+    cover: "/images/single12.JPG",
+    coverHover: "/images/single12.JPG",
     post: "Non-AC · Single Bed",
     ac: false,
     minAdults: 1,
@@ -710,7 +728,7 @@ export const roomItems = [
       "Erat ipsum justo amet duo et elitr dolor, est duo duo eos lorem sed diam stet diam sed stet lorem.",
     yellowbtn: "View Detail",
     darkbtn: "book now",
-  },
+  }, 
 ];
 // Add social icons data used by the SocialIcons component
 export const socialIconLocations = [

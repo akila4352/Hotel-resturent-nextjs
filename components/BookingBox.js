@@ -7,7 +7,7 @@ export default function BookingBox({
   bookingRef,
   calendarRef,
   isFixed,
-  absTop,
+  absTop, 
   openDate,
   setOpenDate,
   range,
@@ -24,9 +24,12 @@ export default function BookingBox({
 
   // mapping roomType -> iCal URL (replace with your real feeds or put .ics in /public/calendars/)
   const iCalMap = {
-    single: "/calendars/single.ics",
-    double: "/calendars/double.ics",
-    triple: "https://ical.booking.com/v1/export?t=a75aef94-6f98-443a-8b24-f179be163fe5",
+    room3: "https://ical.booking.com/v1/export?t=a4e9369b-eba9-4794-9c66-3b461d62862a", // Relax Deluxe (ROOM-3. Double ROOM)
+    room2: "https://ical.booking.com/v1/export?t=b6905504-0332-405d-bbda-9c90a024503b", // Antik room (ROOM-2. Double Room AC)
+    room5: "https://ical.booking.com/v1/export?t=0daa19a6-a97f-4ede-9fec-e1787aca9672", // No Air Conditioning With Fan (ROOM-5. Double Room Non AC)
+    room1: "https://ical.booking.com/v1/export?t=a75aef94-6f98-443a-8b24-f179be163fe5", // Family Room (ROOM-1. Triple Room AC room)
+    room4: "/calendars/room4.ics", // Deluxe room (ROOM-4. Double Room AC)
+    room6: "https://ical.booking.com/v1/export?t=dd62bdaf-ffa4-4a91-ae04-7eaed4ec79d5", // Non Air conditioning With Fan (ROOM-6. Single Room Non AC)
   }
 
   // blocked dates state (array of Date objects) and a Set of ISO strings for quick lookup
@@ -261,21 +264,25 @@ export default function BookingBox({
             onChange={(e) => handleRoomType && handleRoomType(e.target.value)}
             aria-label="Select room type"
             style={{
-              padding: "10px 12px",
+              padding: "8px 8px", // reduced padding
               borderRadius: 0,
               border: "0.5px solid rgba(11,18,32,0.08)",
               background: "white",
               fontWeight: 700,
               fontSize: 13,
               height: 44,
-              minWidth: 130,
+              minWidth: 90, // reduced minWidth
+              maxWidth: 120, // optional: set a maxWidth for further reduction
             }}
             required
           >
             <option value="">Room Type</option>
-            <option value="single">Single</option>
-            <option value="double">Double</option>
-            <option value="triple">Triple</option>
+            <option value="room3">ROOM-3. Relax Deluxe</option>
+            <option value="room2">ROOM-2. Antik room</option>
+            <option value="room5">ROOM-5. No Air Conditioning With Fan</option>
+            <option value="room1">ROOM-1. Family Room</option>
+            <option value="room4">ROOM-4. Deluxe room</option>
+            <option value="room6">ROOM-6. Non Air conditioning With Fan</option>
           </select>
         </div>
 

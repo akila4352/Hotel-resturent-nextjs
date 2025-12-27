@@ -18,19 +18,21 @@ export const rooms = roomdata.slice(0, 6).map((r, i) => ({
   maxAdults: Number.isFinite(r.maxAdults) ? r.maxAdults : (r.maxAdults === 0 ? 0 : (r.maxAdults ?? 2)),
   maxChildren: Number.isFinite(r.maxChildren) ? r.maxChildren : (r.maxChildren === 0 ? 0 : (r.maxChildren ?? 1)),
   oneAdultRequiresChild: !!r.oneAdultRequiresChild,
-  // type for filtering: prefer explicit r.type, otherwise infer from title (Single/Double/Triple), fallback to "double"
+  // type for filtering: use explicit mapping for new room keys
   type: (() => {
-    if (r.type) return String(r.type).toLowerCase()
-    const title = String(r.title || "").toLowerCase()
-    if (title.includes("triple")) return "triple"
-    if (title.includes("single")) return "single"
-    if (title.includes("double")) return "double"
-    // fallback: use metaType or default to double
-    if (r.metaType) return String(r.metaType).toLowerCase()
-    return "double"
+    switch (String(r.title || "")) {
+      case "Relax Deluxe": return "room3"
+      case "Antik room": return "room2"
+      case "No Air Conditioning With Fan": return "room5"
+      case "Family Room": return "room1"
+      case "Deluxe room": return "room4"
+      case "Non Air conditioning With Fan": return "room6"
+      default: return `room${r.id || (i + 1)}`
+    }
   })(),
+  roomNumber: r.roomNumber || r.id || (i + 1),
 }))
- 
+  
 const Rooms = () => {
   const router = useRouter()
   const handleBookRoom = (r) => {
@@ -62,14 +64,14 @@ const Rooms = () => {
           </div>
           <div className='grid-4 py'>
             {roomdata.map((item) => (
-              // add a small wrapper class so styles target only these room cards
               <div key={item.id} className="room-item" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <Card data={item} caption={item.cuisine || item.dish || item.post} />
+                {/* Show room number in the card title */}
+                <Card data={{...item, title: `ROOM-${item.roomNumber}. ${item.title || item.name}`}} caption={item.cuisine || item.dish || item.post} />
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button
                     onClick={() => handleBookRoom(item)}
                     className="btn continue"
-                    aria-label={`Book ${item.title}`}
+                    aria-label={`Book ROOM-${item.roomNumber}. ${item.title || item.name}`}
                     style={{ padding: "8px 12px", borderRadius: 8 }}
                   >
                     Book this room
