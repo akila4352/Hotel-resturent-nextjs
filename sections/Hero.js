@@ -229,14 +229,6 @@ const AutoSwapIcons = ({ items }) => {
 }
 
 
-const LANGUAGES = [
-  { code: "en", label: "English", flag: "🇬🇧" },
-  { code: "fr", label: "Français", flag: "🇫🇷" },
-  { code: "de", label: "Deutsch", flag: "🇩🇪" },
-  { code: "es", label: "Español", flag: "🇪🇸" },
-  { code: "zh", label: "中文", flag: "🇨🇳" },
-]
-
 const Hero = () => {
   const router = useRouter()
   const [openDate, setOpenDate] = useState(false)
@@ -251,16 +243,6 @@ const Hero = () => {
   const [isFixed, setIsFixed] = useState(true)
   const [absTop, setAbsTop] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
-
-  // Language switcher state
-  const [showLangMenu, setShowLangMenu] = useState(false)
-  const [currentLang, setCurrentLang] = useState(LANGUAGES[0])
-
-  const handleLangClick = (lang) => {
-    setCurrentLang(lang)
-    setShowLangMenu(false)
-    // Optionally: trigger i18n language change here
-  }
 
   useEffect(() => {
     function updateMobile() {
@@ -354,30 +336,6 @@ const Hero = () => {
 
   return (
     <>
-      {/* Floating Language Switch Button */}
-      <div className="lang-fab-root">
-        <button
-          className="lang-fab-btn"
-          aria-label="Switch language"
-          onClick={() => setShowLangMenu((v) => !v)}
-        >
-          <span style={{ fontSize: 24 }}>{currentLang.flag}</span>
-        </button>
-        {showLangMenu && (
-          <div className="lang-fab-menu">
-            {LANGUAGES.map((lang) => (
-              <button
-                key={lang.code}
-                className={`lang-fab-menu-item${lang.code === currentLang.code ? " active" : ""}`}
-                onClick={() => handleLangClick(lang)}
-              >
-                <span style={{ fontSize: 20, marginRight: 8 }}>{lang.flag}</span>
-                {lang.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
       <style jsx>{`
         /* 3D Title Effect */
         .hero-sec .heading-title h1,
@@ -451,68 +409,6 @@ const Hero = () => {
             width: 120px;
             height: 20px;
           }
-        }
-        .lang-fab-root {
-          position: fixed;
-          left: 24px;
-          bottom: 24px;
-          z-index: 9999;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-        }
-        .lang-fab-btn {
-          background: #25d366;
-          color: #fff;
-          border: none;
-          border-radius: 50%;
-          width: 56px;
-          height: 56px;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 24px;
-          cursor: pointer;
-          transition: box-shadow 0.2s;
-        }
-        .lang-fab-btn:hover {
-          box-shadow: 0 8px 24px rgba(0,0,0,0.22);
-        }
-        .lang-fab-menu {
-          margin-top: 8px;
-          background: #fff;
-          border-radius: 12px;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.13);
-          padding: 8px 0;
-          min-width: 160px;
-          animation: fadeInLangMenu 0.18s;
-        }
-        .lang-fab-menu-item {
-          width: 100%;
-          background: none;
-          border: none;
-          text-align: left;
-          padding: 10px 18px;
-          font-size: 16px;
-          color: #222;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          transition: background 0.15s;
-        }
-        .lang-fab-menu-item.active,
-        .lang-fab-menu-item:hover {
-          background: #e6f4ea;
-        }
-        @keyframes fadeInLangMenu {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @media (max-width: 600px) {
-          .lang-fab-root { left: 10px; bottom: 10px; }
-          .lang-fab-btn { width: 44px; height: 44px; font-size: 20px; }
-          .lang-fab-menu { min-width: 120px; }
         }
       `}</style>
 
@@ -593,4 +489,4 @@ const Hero = () => {
   )
 }
 
-export default Hero 
+export default Hero

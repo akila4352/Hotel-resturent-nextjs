@@ -52,17 +52,18 @@ const Header = () => {
                onMouseEnter={() => setZoom(true)}
                onMouseLeave={() => setZoom(false)}
              >
-               {/* increased logo size to 260x80 and added zoom transition */}
+               {/* Increased logo size to show full logo */}
                <Image
-                 src="/images/logo1.png"
+                 src="/images/logoo.png"
                  alt="AMORE logo"
-                 width={200}  // reduced logo width
-                 height={48}  // reduced logo height
+                 width={320}   // Increased width for full logo
+                 height={55}   // Keep original height
                  priority
                  style={{
                    objectFit: "contain",
                    transition: "transform 220ms ease",
-                   transform: zoom ? "scale(1.15)" : "scale(1)"
+                   transform: zoom ? "scale(1.15)" : "scale(1)",
+                   // Optionally add padding or margin if needed for spacing
                  }}
                  className="logomin"
                />

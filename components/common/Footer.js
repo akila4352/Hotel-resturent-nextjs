@@ -12,22 +12,29 @@ import { ref, push, serverTimestamp } from "firebase/database";
 
 const Footer = () => {
   const [message, setMessage] = useState("");
+  const [gmail, setGmail] = useState(""); // new state for gmail
   const [status, setStatus] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus("");
+    if (!gmail.trim() || !gmail.includes("@gmail.com")) {
+      setStatus("Please enter a valid Gmail address.");
+      return;
+    }
     if (!message.trim()) {
       setStatus("Please enter a message.");
       return;
     }
-    try {
+    try { 
       await push(ref(rtdb, "newsletterMessages"), {
+        gmail,
         message,
         createdAt: Date.now(),
       });
       setStatus("Message sent!");
       setMessage("");
+      setGmail("");
     } catch (error) {
       setStatus("Failed to send. Try again.");
     }
@@ -160,11 +167,21 @@ const Footer = () => {
           
           <form className="newsletter-form" onSubmit={handleSubmit}>
             <input 
+              type="email"
+              placeholder="Enter your Gmail address"
+              className="newsletter-input"
+              value={gmail}
+              onChange={e => setGmail(e.target.value)}
+              style={{ marginBottom: 10 }}
+              required
+            />
+            <input 
               type="text" 
               placeholder="Send your message" 
               className="newsletter-input"
               value={message}
               onChange={e => setMessage(e.target.value)}
+              required
             />
             <button type="submit" className="newsletter-submit">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -231,6 +248,9 @@ const Footer = () => {
           flex: 1;
           min-width: 300px;
           max-width: 500px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
 
         .newsletter-input {
@@ -243,6 +263,7 @@ const Footer = () => {
           font-size: 15px;
           outline: none;
           transition: all 0.3s ease;
+          margin-bottom: 0;
         }
 
         .newsletter-input::placeholder {

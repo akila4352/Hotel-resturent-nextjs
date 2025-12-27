@@ -131,7 +131,9 @@ const TableData = ({ setReservationCount }) => {
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {messages.map((msg) => (
                   <li key={msg.id} style={{ borderBottom: '1px solid #444', padding: '0.5rem 0', color: '#fff' }}>
-                    <div><strong>Email:</strong> {msg.email || '-'}</div>
+                    <div>
+                      <strong>Email:</strong> {msg.gmail || msg.email || '-'}
+                    </div>
                     {msg.message && <div><strong>Message:</strong> {msg.message}</div>}
                     {msg.createdAt &&
                       typeof msg.createdAt === 'string' &&
