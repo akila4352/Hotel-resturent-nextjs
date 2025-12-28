@@ -16,6 +16,7 @@
     "@fortawesome/react-fontawesome": "^3.1.0",
     "@mui/icons-material": "^7.3.6",
     "apexcharts": "^5.3.6",
+    "cookie": "^1.1.1",
     "date-fns": "^4.1.0",
     "firebase": "^12.6.0",
     "framer-motion": "^7.10.3",
