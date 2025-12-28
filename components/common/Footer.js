@@ -36,11 +36,22 @@ const Footer = () => {
       return;
     }
     try {
-      // Optionally, you can verify the token server-side here if needed.
+      // 1. Verify reCAPTCHA token with your backend, send gmail as well
+      const verifyRes = await fetch("/api/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: recaptchaToken, gmail }), // send gmail
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.success) {
+        setStatus("reCAPTCHA failed. Please try again.");
+        return;
+      }
+
+      // 2. Only push to Firebase if reCAPTCHA is valid
       await push(ref(rtdb, "newsletterMessages"), {
         gmail,
         message,
-        recaptchaToken,
         createdAt: Date.now(),
       });
       setStatus("Message sent!");
