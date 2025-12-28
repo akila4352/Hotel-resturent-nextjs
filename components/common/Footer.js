@@ -6,7 +6,7 @@ import { BsFacebook } from "react-icons/bs"
 import { AiFillInstagram } from "react-icons/ai"
 import { FaAirbnb, FaTripadvisor } from "react-icons/fa"
 import { FaXTwitter } from "react-icons/fa6"
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { rtdb } from "../../lib/firebase";
 import { ref, push, serverTimestamp } from "firebase/database";
 import dynamic from "next/dynamic";
@@ -17,9 +17,8 @@ const Footer = () => {
   const [message, setMessage] = useState("");
   const [gmail, setGmail] = useState(""); // new state for gmail
   const [status, setStatus] = useState("");
-  const [recaptchaToken, setRecaptchaToken] = useState("");
-  const [loading, setLoading] = useState(false);
-  const recaptchaRef = useRef(null);
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,36 +35,24 @@ const Footer = () => {
       setStatus("Please complete the reCAPTCHA.");
       return;
     }
-    setLoading(true);
     try {
-      // 1. Verify reCAPTCHA token with your backend, send gmail as well
-      const verifyRes = await fetch("/api/verify-recaptcha", {
+      const res = await fetch("/api/verify-recaptcha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: recaptchaToken, gmail }), // send gmail
+        body: JSON.stringify({ token: recaptchaToken, gmail, message }),
       });
-      const verifyData = await verifyRes.json();
-      if (!verifyData.success) {
-        setStatus("reCAPTCHA failed. Please try again.");
-        setLoading(false);
-        return;
+      const data = await res.json();
+      if (data.success) {
+        setStatus("Message sent!");
+        setMessage("");
+        setGmail("");
+        setRecaptchaToken(null);
+      } else {
+        setStatus(data.error || "Failed to send. Try again.");
       }
-
-      // 2. Only push to Firebase if reCAPTCHA is valid
-      await push(ref(rtdb, "newsletterMessages"), {
-        gmail,
-        message,
-        createdAt: Date.now(),
-      });
-      setStatus("Message sent!");
-      setMessage("");
-      setGmail("");
-      setRecaptchaToken("");
-      if (recaptchaRef.current) recaptchaRef.current.reset();
     } catch (error) {
       setStatus("Failed to send. Try again.");
     }
-    setLoading(false);
   };
   return (
     <>
@@ -211,22 +198,19 @@ const Footer = () => {
               onChange={e => setMessage(e.target.value)}
               required
             />
-            {/* reCAPTCHA widget */}
+            {/* Add reCAPTCHA widget */}
             <div style={{ margin: "10px 0" }}>
-              <ReCAPTCHA
-                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LfzQjksAAAAAJ48SRIwoZW-yVjaZMFGOXIdGA1p"}
-                onChange={token => setRecaptchaToken(token)}
-                ref={recaptchaRef}
-              />
-            </div>
-            <button type="submit" className="newsletter-submit" disabled={loading}>
-              {loading ? (
-                <span style={{ fontSize: 16 }}>Sending...</span>
-              ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-                </svg>
+              {siteKey && (
+                <ReCAPTCHA
+                  sitekey={siteKey}
+                  onChange={token => setRecaptchaToken(token)}
+                />
               )}
+            </div>
+            <button type="submit" className="newsletter-submit">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+              </svg>
             </button>
           </form>
           {status && (
