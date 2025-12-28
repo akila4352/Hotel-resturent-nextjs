@@ -1,3 +1,4 @@
+import Head from "next/head"
 import { home } from "@/assets/data/dummydata"
 import Banner from "@/components/Banner"
 import Expertise from "@/components/Expertise"
@@ -229,6 +230,38 @@ const AutoSwapIcons = ({ items }) => {
 }
 
 
+const seoKeywords = [
+  "luxury beach resort",
+  "boutique hotel",
+  "romantic hotel",
+  "family-friendly hotel",
+  "quiet beach hotel",
+  "all-inclusive resort",
+  "hotel in srilanka",
+  "hotel in Balapitiya",
+  "hotel in Ambalangoda",
+  "hotel in Galle",
+  "beach hotel in srilanka",
+  "beach hotel in Balapitiya",
+  "beach hotel in Ambalangoda",
+  "beach hotel in Galle",
+  "resort in srilanka",
+  "resort in Balapitiya",
+  "resort in Ambalangoda",
+  "resort in Galle",
+  "beachfront hotel srilanka",
+  "beachfront hotel Balapitiya",
+  "beachfront hotel Ambalangoda",
+  "beachfront hotel Galle",
+  "seaside hotel srilanka",
+  "seaside hotel Balapitiya",
+  "seaside hotel Ambalangoda",
+  "seaside hotel Galle"
+].join(", ");
+
+const seoTitle = "Hotel Amore | Luxury Beach Resort & Boutique Hotel in Balapitiya, Sri Lanka";
+const seoDescription = "Hotel Amore is a luxury beachfront boutique hotel and resort in Balapitiya, Sri Lanka. Perfect for romantic getaways, family holidays, and quiet escapes. Enjoy all-inclusive amenities, stunning sea views, and easy access to Ambalangoda and Galle.";
+
 const Hero = () => {
   const router = useRouter()
   const [openDate, setOpenDate] = useState(false)
@@ -336,6 +369,23 @@ const Hero = () => {
 
   return (
     <>
+      <Head>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <meta name="keywords" content={seoKeywords} />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://yourdomain.com/" />
+        <meta property="og:image" content="https://yourdomain.com/images/og-image.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+        <meta name="twitter:image" content="https://yourdomain.com/images/og-image.jpg" />
+        <link rel="canonical" href="https://yourdomain.com/" />
+      </Head>
+
       <style jsx>{`
         /* 3D Title Effect */
         .hero-sec .heading-title h1,
@@ -429,7 +479,7 @@ const Hero = () => {
             overflowX: 'hidden',
           }}
         >
-          <Carousel compact={isMobile} />
+          <Carousel compact={isMobile} /> 
 
           {isMobile && (
             <div style={{ marginTop: -24, padding: "0 16px", boxSizing: "border-box" }}>

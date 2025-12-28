@@ -3,6 +3,11 @@
 import React, { useState } from "react"
 import Image from "next/image"
 import { dishdata } from "@/assets/data/dummydata"
+import Head from "next/head"
+
+const seoTitle = "Restaurant | Hotel Amore - Beachfront Dining in Balapitiya, Sri Lanka"
+const seoDescription = "Enjoy exquisite dining at Hotel Amore's beachfront restaurant in Balapitiya, Sri Lanka. Savor local and international cuisine in a stunning seaside setting."
+const seoKeywords = "luxury beach resort, boutique hotel, romantic hotel, family-friendly hotel, quiet beach hotel, all-inclusive resort, hotel in srilanka, hotel in Balapitiya, hotel in Ambalangoda, hotel in Galle, beach hotel in srilanka, beach hotel in Balapitiya, beach hotel in Ambalangoda, beach hotel in Galle, resort in srilanka, resort in Balapitiya, resort in Ambalangoda, resort in Galle, beachfront hotel srilanka, beachfront hotel Balapitiya, beachfront hotel Ambalangoda, beachfront hotel Galle, seaside hotel srilanka, seaside hotel Balapitiya, seaside hotel Ambalangoda, seaside hotel Galle"
 
 const Restaurant2 = () => {
   const [activeMenuTab, setActiveMenuTab] = useState("BREAKFAST")
@@ -16,7 +21,7 @@ const Restaurant2 = () => {
     ? dishdata 
     : dishdata.filter(item => item.category === activeGalleryTab)
 
-  const menuTabs = [
+  const menuTabs = [ 
     { name: "BREAKFAST", time: "08:00 AM - 10:00 AM" },
     { name: "LUNCH", time: "01:00 PM - 3:00 PM" }, // Fixed: was 01:00 AM
     { name: "DINNER", time: "08:00 PM - 10:00 PM" }, // Fixed: was 08:00 AM
@@ -25,6 +30,21 @@ const Restaurant2 = () => {
 
   return (
     <>
+      <Head>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <meta name="keywords" content={seoKeywords} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://yourdomain.com/restaurant" />
+        <meta property="og:image" content="https://yourdomain.com/images/og-image.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+        <meta name="twitter:image" content="https://yourdomain.com/images/og-image.jpg" />
+        <link rel="canonical" href="https://yourdomain.com/restaurant" />
+      </Head>
       {/* Menu Section */}
       <section style={{ padding: '60px 0', background: 'white' }}>
         <div className='container'>

@@ -3,6 +3,7 @@ import { Card } from "@/components/common/Card"
 import { Title, TitleSm } from "@/components/common/Title"
 import React from "react"
 import { useRouter } from "next/router"
+import Head from "next/head"
 
 // create a small repeating price palette for rooms (adjust as needed)
 const defaultPrices = [24.99, 34.99, 54.99]
@@ -28,11 +29,15 @@ export const rooms = roomdata.slice(0, 6).map((r, i) => ({
       case "Deluxe room": return "room4"
       case "Non Air conditioning With Fan": return "room6"
       default: return `room${r.id || (i + 1)}`
-    }
+    } 
   })(),
   roomNumber: r.roomNumber || r.id || (i + 1),
 }))
   
+const seoTitle = "Our Rooms | Hotel Amore - Luxury Beachfront Resort in Balapitiya, Sri Lanka"
+const seoDescription = "Explore our elegant rooms and suites at Hotel Amore, a luxury beachfront resort in Balapitiya, Sri Lanka. Perfect for families, couples, and travelers seeking comfort."
+const seoKeywords = "luxury beach resort, boutique hotel, romantic hotel, family-friendly hotel, quiet beach hotel, all-inclusive resort, hotel in srilanka, hotel in Balapitiya, hotel in Ambalangoda, hotel in Galle, beach hotel in srilanka, beach hotel in Balapitiya, beach hotel in Ambalangoda, beach hotel in Galle, resort in srilanka, resort in Balapitiya, resort in Ambalangoda, resort in Galle, beachfront hotel srilanka, beachfront hotel Balapitiya, beachfront hotel Ambalangoda, beachfront hotel Galle, seaside hotel srilanka, seaside hotel Balapitiya, seaside hotel Ambalangoda, seaside hotel Galle"
+
 const Rooms = () => {
   const router = useRouter()
   const handleBookRoom = (r) => {
@@ -51,6 +56,21 @@ const Rooms = () => {
 
   return (
     <>
+      <Head>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <meta name="keywords" content={seoKeywords} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://yourdomain.com/rooms" />
+        <meta property="og:image" content="https://yourdomain.com/images/og-image.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+        <meta name="twitter:image" content="https://yourdomain.com/images/og-image.jpg" />
+        <link rel="canonical" href="https://yourdomain.com/rooms" />
+      </Head>
       <section className='agency bg-top'> 
         <div className='container'>
           <div className='heading-title'>
