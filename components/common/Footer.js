@@ -199,7 +199,7 @@ const Footer = () => {
             {/* reCAPTCHA widget */}
             <div style={{ margin: "10px 0" }}>
               <ReCAPTCHA
-                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LepQDksAAAAACCjzepRtsmT4LirhcQ0kFyl0kHt"}
+                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LfzQjksAAAAAJ48SRIwoZW-yVjaZMFGOXIdGA1p"}
                 onChange={token => setRecaptchaToken(token)}
                 ref={recaptchaRef}
               />
