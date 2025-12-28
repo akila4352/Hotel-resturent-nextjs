@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react"
 import { DateRange } from "react-date-range"
 import { format } from "date-fns"
 import { useRouter } from "next/router"
+import { rtdb } from "@/lib/firebase"
+import { ref as dbRef, onValue } from "firebase/database"
 
 export default function BookingBox({
   bookingRef,
@@ -22,66 +24,79 @@ export default function BookingBox({
   const router = useRouter()
   const formattedDate = (d) => (d ? format(d, "dd LLL yyyy").toUpperCase() : "")
 
-  // mapping roomType -> iCal URL (replace with your real feeds or put .ics in /public/calendars/)
+  // mapping roomType -> iCal URL
   const iCalMap = {
-    room3: "https://ical.booking.com/v1/export?t=a4e9369b-eba9-4794-9c66-3b461d62862a", // Relax Deluxe (ROOM-3. Double ROOM)
-    room2: "https://ical.booking.com/v1/export?t=b6905504-0332-405d-bbda-9c90a024503b", // Antik room (ROOM-2. Double Room AC)
-    room5: "https://ical.booking.com/v1/export?t=0daa19a6-a97f-4ede-9fec-e1787aca9672", // No Air Conditioning With Fan (ROOM-5. Double Room Non AC)
-    room1: "https://ical.booking.com/v1/export?t=a75aef94-6f98-443a-8b24-f179be163fe5", // Family Room (ROOM-1. Triple Room AC room)
-    room4: "/calendars/room4.ics", // Deluxe room (ROOM-4. Double Room AC)
-    room6: "https://ical.booking.com/v1/export?t=dd62bdaf-ffa4-4a91-ae04-7eaed4ec79d5", // Non Air conditioning With Fan (ROOM-6. Single Room Non AC)
+    room3: "https://ical.booking.com/v1/export?t=a4e9369b-eba9-4794-9c66-3b461d62862a",
+    room2: "https://ical.booking.com/v1/export?t=b6905504-0332-405d-bbda-9c90a024503b",
+    room5: "https://ical.booking.com/v1/export?t=0daa19a6-a97f-4ede-9fec-e1787aca9672",
+    room1: "https://ical.booking.com/v1/export?t=a75aef94-6f98-443a-8b24-f179be163fe5",
+    room4: "/calendars/room4.ics",
+    room6: "https://ical.booking.com/v1/export?t=dd62bdaf-ffa4-4a91-ae04-7eaed4ec79d5",
   }
 
-  // blocked dates state (array of Date objects) and a Set of ISO strings for quick lookup
-  const [blockedDates, setBlockedDates] = useState([])
+  // blocked dates from iCal (Booking.com)
+  const [iCalBlockedDates, setICalBlockedDates] = useState([])
+  
+  // blocked dates from Firebase reservations
+  const [firebaseBlockedDates, setFirebaseBlockedDates] = useState([])
+  
+  // combined blocked dates
+  const blockedDates = useMemo(() => {
+    return [...iCalBlockedDates, ...firebaseBlockedDates]
+  }, [iCalBlockedDates, firebaseBlockedDates])
+
+  // Set of blocked date strings for quick lookup
   const blockedSet = useMemo(() => {
     const s = new Set()
     blockedDates.forEach((d) => s.add(d.toISOString().slice(0, 10)))
     return s
   }, [blockedDates])
  
-  // local flag to prevent double-clicks while calendar sync is running
   const [syncing, setSyncing] = useState(false)
 
-  // when the user clicks the date pill/calendar icon: toggle the calendar UI (ALERT REMOVED)
+  // Toggle calendar visibility
   const onDateToggle = () => {
-    // toggle the date picker visibility
     try {
       setOpenDate((s) => !s)
     } catch (e) {
-      // defensive: if setOpenDate not provided, ignore
       console.warn("setOpenDate unavailable", e)
     }
   } 
 
-  // parse simple iCal: extract DTSTART/DTEND from VEVENTs (supports YYYYMMDD and YYYYMMDDTHHMMSSZ)
+  // Parse iCal to extract blocked dates
   const parseICal = async (text) => {
     const lines = text.split(/\r?\n/)
     const events = []
     let inEvent = false
     let cur = {}
+    
     for (let raw of lines) {
       const line = raw.trim()
       if (!line) continue
+      
       if (line === "BEGIN:VEVENT") {
         inEvent = true
         cur = { status: "CONFIRMED" }
         continue
       }
+      
       if (line === "END:VEVENT") {
         inEvent = false
-        // ignore cancelled events
         if (cur.status && String(cur.status).toUpperCase() === "CANCELLED") {
           cur = {}
           continue
         }
-        if (cur.dtstart) events.push({ dtstart: cur.dtstart, dtend: cur.dtend || cur.dtstart, summary: cur.summary || "" })
+        if (cur.dtstart) events.push({ 
+          dtstart: cur.dtstart, 
+          dtend: cur.dtend || cur.dtstart, 
+          summary: cur.summary || "" 
+        })
         cur = {}
         continue
       }
+      
       if (!inEvent) continue
 
-      // capture DTSTART/DTEND/STATUS/SUMMARY lines robustly (handle params like DTSTART;VALUE=DATE:...)
       if (line.toUpperCase().startsWith("DTSTART")) {
         const idx = line.indexOf(":")
         if (idx !== -1) cur.dtstart = line.slice(idx + 1)
@@ -104,11 +119,10 @@ export default function BookingBox({
       }
     }
 
-    // expand events to array of date objects (inclusive of start, exclusive of dtend per iCal; subtract one day)
+    // Expand events to array of date objects
     const out = []
     const toDate = (val) => {
       if (!val) return null
-      // YYYYMMDD or YYYYMMDDTHHMMSSZ
       const m = val.match(/^(\d{4})(\d{2})(\d{2})/)
       if (m) {
         return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
@@ -124,11 +138,10 @@ export default function BookingBox({
     }
 
     for (const ev of events) {
-      // Treat any VEVENT (including ones whose SUMMARY contains "Closed" or similar) as blocked
       const s = toDate(ev.dtstart)
       let e = toDate(ev.dtend)
       if (!s) continue
-      if (e) e = addDays(e, -1) // iCal DTEND is exclusive
+      if (e) e = addDays(e, -1)
       else e = s
       for (let d = new Date(s); d <= e; d = addDays(d, 1)) {
         out.push(new Date(d))
@@ -137,50 +150,203 @@ export default function BookingBox({
     return out
   }
 
-  // fetch iCal when roomType changes — use local API proxy to avoid CORS
+  // Fetch Firebase reservations and block dates for selected room type
   useEffect(() => {
     const type = (options?.roomType || "").toLowerCase()
     if (!type) {
-      setBlockedDates([])
+      setFirebaseBlockedDates([])
       return
     }
+
+    // Listen to Firebase reservations in real-time
+    const bookingsRef = dbRef(rtdb, "reservations")
+    
+    const unsubscribe = onValue(
+      bookingsRef, 
+      (snapshot) => {
+        try {
+          const data = snapshot.val()
+          
+          if (!data) {
+            console.log("Firebase: No reservations found in database")
+            setFirebaseBlockedDates([])
+            return
+          }
+
+          const blocked = []
+          let matchedBookings = 0
+          let errorBookings = []
+          
+          // Convert object to array and filter by room type
+          Object.entries(data).forEach(([bookingId, booking]) => {
+            try {
+              // Debug: Log the booking structure
+              console.log(`Checking booking ${bookingId}:`, {
+                selectedRooms: booking.selectedRooms,
+                checkIn: booking.checkIn,
+                checkOut: booking.checkOut
+              })
+              
+              // Check if booking has selectedRooms array
+              if (!booking.selectedRooms || !Array.isArray(booking.selectedRooms)) {
+                console.warn(`Booking ${bookingId}: Missing selectedRooms array`)
+                return
+              }
+
+              // Check if any room in selectedRooms matches the selected room type
+              // Convert room type (e.g., "room2") to just the number (e.g., "2")
+              const typeNumber = type.replace("room", "")
+              
+              const hasMatchingRoom = booking.selectedRooms.some(room => {
+                const roomId = String(room.id || "")
+                // Match both "2" with "room2" and "room2" with "room2"
+                const matches = roomId === typeNumber || roomId === type
+                console.log(`  Room ID ${roomId} vs ${type} (${typeNumber}): ${matches}`)
+                return matches
+              })
+
+              if (hasMatchingRoom) {
+                matchedBookings++
+                
+                // Get check-in and check-out dates
+                const checkInStr = booking.checkIn
+                const checkOutStr = booking.checkOut
+                
+                if (!checkInStr || !checkOutStr) {
+                  errorBookings.push({
+                    id: bookingId,
+                    reason: "Missing checkIn or checkOut dates"
+                  })
+                  return
+                }
+
+                const startDate = new Date(checkInStr)
+                const endDate = new Date(checkOutStr)
+                
+                // Validate dates
+                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                  errorBookings.push({
+                    id: bookingId,
+                    reason: `Invalid date format: ${checkInStr} - ${checkOutStr}`
+                  })
+                  return
+                }
+                
+                // Block all dates from check-in to check-out (inclusive)
+                const currentDate = new Date(startDate)
+                while (currentDate <= endDate) {
+                  blocked.push(new Date(currentDate))
+                  currentDate.setDate(currentDate.getDate() + 1)
+                }
+              }
+            } catch (err) {
+              console.error(`Error processing booking ${bookingId}:`, err)
+              errorBookings.push({
+                id: bookingId,
+                reason: err.message
+              })
+            }
+          })
+
+          setFirebaseBlockedDates(blocked)
+          
+          // Log results
+          console.log(`Firebase: Found ${matchedBookings} bookings for ${type}`)
+          console.log(`Firebase: Blocked ${blocked.length} dates for ${type}`)
+          
+          if (errorBookings.length > 0) {
+            console.warn("Firebase: Some bookings had errors:", errorBookings)
+            alert(`Warning: ${errorBookings.length} booking(s) could not be processed. Check console for details.`)
+          }
+        } catch (err) {
+          console.error("Firebase: Error fetching reservations:", err)
+          alert(`Firebase Error: Could not fetch reservations. ${err.message}`)
+          setFirebaseBlockedDates([])
+        }
+      },
+      (error) => {
+        console.error("Firebase: Database read failed:", error)
+        alert(`Firebase Database Error: ${error.message}. Please check your Firebase security rules and database structure.`)
+        setFirebaseBlockedDates([])
+      }
+    )
+
+    return () => unsubscribe()
+  }, [options?.roomType])
+
+  // Fetch iCal when roomType changes
+  useEffect(() => {
+    const type = (options?.roomType || "").toLowerCase()
+    if (!type) {
+      setICalBlockedDates([])
+      return
+    }
+    
     const url = iCalMap[type]
     if (!url) {
-      setBlockedDates([])
+      setICalBlockedDates([])
       return
     }
+    
     let cancelled = false
+    
     ;(async () => {
       try {
-        // call our server-side proxy to avoid CORS issues
         const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(url)}`
         const res = await fetch(proxyUrl)
         if (!res.ok) throw new Error("Failed to fetch iCal via proxy")
         const text = await res.text()
         if (cancelled) return
         const parsed = await parseICal(text)
-        if (!cancelled) setBlockedDates(parsed)
+        if (!cancelled) {
+          setICalBlockedDates(parsed)
+          console.log(`iCal: Blocked ${parsed.length} dates for ${type}`)
+        }
       } catch (err) {
         console.error("iCal fetch/parse error:", err)
-        if (!cancelled) setBlockedDates([])
+        if (!cancelled) setICalBlockedDates([])
       }
     })()
+    
     return () => { cancelled = true }
   }, [options?.roomType])
 
-  // navigate to reservation page
+  // Navigate to reservation page
   const onBookNow = async () => {
     if (submitting || syncing) return
-    // require room type selection
+    
     if (!options?.roomType) {
       alert("Please select a room type before booking.")
       return
     }
 
-    const start = range && range[0] && range[0].startDate
-    const end = range && range[0] && range[0].endDate
-    const checkIn = start ? start.toISOString().slice(0, 10) : ""
-    const checkOut = end ? end.toISOString().slice(0, 10) : ""
+
+    let start = range && range[0] && range[0].startDate
+    let end = range && range[0] && range[0].endDate
+    // If check-in and check-out are the same, set check-out to next day
+    if (start && end && start.toDateString() === end.toDateString()) {
+      end = new Date(start)
+      end.setDate(end.getDate() + 1)
+    }
+    // Format as YYYY-MM-DD
+    const checkIn = start ? format(start, "yyyy-MM-dd") : ""
+    const checkOut = end ? format(end, "yyyy-MM-dd") : ""
+
+    // Validate dates are not blocked
+    const currentDate = new Date(start)
+    const endDate = new Date(end)
+    const hasBlockedDate = []
+    while (currentDate <= endDate) {
+      const dateStr = format(currentDate, "yyyy-MM-dd")
+      if (blockedSet.has(dateStr)) {
+        hasBlockedDate.push(format(currentDate, "dd MMM yyyy"))
+      }
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    if (hasBlockedDate.length > 0) {
+      alert(`The following dates are already booked: ${hasBlockedDate.join(", ")}. Please select different dates.`)
+      return
+    }
 
     const query = {
       checkIn,
@@ -191,35 +357,33 @@ export default function BookingBox({
       roomType: String(options?.roomType ?? ""),
     }
 
-    // Synchronize calendar before navigating
+    // Sync calendar before navigating
     setSyncing(true)
     try {
-      const iCalUrl = iCalMap[(options?.roomType || "").toLowerCase()] || process.env.NEXT_PUBLIC_TRIPLE_ICAL
-      if (!iCalUrl) throw new Error("No remote calendar URL configured for this room type.")
-      const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
-      const res = await fetch(proxyUrl)
-      if (!res.ok) throw new Error(`Failed to fetch iCal: ${res.status} ${res.statusText}`)
-      const text = await res.text()
-      const parsed = await parseICal(text)
-      // update UI state and log result (no alert shown)
-      setBlockedDates(parsed)
-      const uniq = new Set(parsed.map((d) => d.toISOString().slice(0, 10)))
-      console.log(`Calendar sync complete. ${uniq.size} blocked date(s) retrieved from remote calendar.`)
+      const iCalUrl = iCalMap[(options?.roomType || "").toLowerCase()]
+      if (iCalUrl && !iCalUrl.startsWith("/")) {
+        const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
+        const res = await fetch(proxyUrl)
+        if (res.ok) {
+          const text = await res.text()
+          const parsed = await parseICal(text)
+          setICalBlockedDates(parsed)
+          console.log(`Calendar sync complete. ${parsed.length} blocked dates.`)
+        }
+      }
     } catch (err) {
       console.error("Calendar sync error:", err)
-      setBlockedDates([])
-      console.error("Calendar sync failed:", err?.message || "Unknown error")
     } finally {
       setSyncing(false)
       router.push({ pathname: "/reservation", query })
     } 
   }
 
-  // compute wrapper position
+  // Compute wrapper position
   const isStatic = !!forceStatic
   const wrapperStyle = {
     position: isStatic ? "static" : isFixed ? "fixed" : "absolute",
-    bottom: isStatic ? "auto" : isFixed ? "2%" : "auto", // moved down (was 6%)
+    bottom: isStatic ? "auto" : isFixed ? "2%" : "auto",
     top: isStatic ? "auto" : isFixed ? "auto" : `${absTop}px`,
     left: isStatic ? "0" : "50%",
     transform: isStatic ? "none" : "translateX(-50%)",
@@ -256,7 +420,7 @@ export default function BookingBox({
           width: isStatic ? "100%" : undefined,
         }}
       >
-        {/* REORDERED: Room type select is now FIRST */}
+        {/* Room type select */}
         <div style={{ display: "flex", alignItems: "center" }}>
           <select
             name="roomType"
@@ -264,15 +428,15 @@ export default function BookingBox({
             onChange={(e) => handleRoomType && handleRoomType(e.target.value)}
             aria-label="Select room type"
             style={{
-              padding: "8px 8px", // reduced padding
+              padding: "8px 8px",
               borderRadius: 0,
               border: "0.5px solid rgba(11,18,32,0.08)",
               background: "white",
               fontWeight: 700,
               fontSize: 13,
               height: 44,
-              minWidth: 90, // reduced minWidth
-              maxWidth: 120, // optional: set a maxWidth for further reduction
+              minWidth: 90,
+              maxWidth: 120,
             }}
             required
           >
@@ -286,7 +450,7 @@ export default function BookingBox({
           </select>
         </div>
 
-        {/* Date pill is now SECOND */}
+        {/* Date pill */}
         <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap" }}>
           <button
             type="button"
@@ -404,7 +568,7 @@ export default function BookingBox({
           </div>
         </div>
 
-        {/* Book Now button - uniform height with other elements */}
+        {/* Book Now button */}
         <button
           onClick={onBookNow}
           disabled={submitting || syncing}

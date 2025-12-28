@@ -173,9 +173,15 @@ export default function ReservationPage() {
       const roomNumbers = bookedRooms.map((sr) => sr.room.id);
       const totalPriceValue = (bookedRooms.reduce((sum, sr) => sum + ((sr.room.price || 0) * sr.qty), 0) + (breakfastType ? totalGuests * breakfastPrices[breakfastType] : 0)) * nights;
 
+      // Always use YYYY-MM-DD and if check-in and check-out are the same, set check-out to next day
+      let checkInDate = ci ? new Date(ci) : checkIn ? new Date(checkIn) : null;
+      let checkOutDate = co ? new Date(co) : checkOut ? new Date(checkOut) : null;
+      if (checkInDate && checkOutDate && checkInDate.toDateString() === checkOutDate.toDateString()) {
+        checkOutDate.setDate(checkOutDate.getDate() + 1);
+      }
       const payload = {
-        checkIn: ci ? ci.toISOString().slice(0, 10) : checkIn || "",
-        checkOut: co ? co.toISOString().slice(0, 10) : checkOut || "",
+        checkIn: checkInDate ? checkInDate.toISOString().slice(0, 10) : "",
+        checkOut: checkOutDate ? checkOutDate.toISOString().slice(0, 10) : "",
         nights,
         adults: Number(adults || 0),
         children: Number(children || 0),
