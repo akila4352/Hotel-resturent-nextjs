@@ -1,12 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState, useRef } from "react"
 import { useRouter } from "next/router"
 import { parseISO, format, differenceInDays } from "date-fns"
 import { rtdb } from "../lib/firebase"
 import { ref as dbRef, push } from "firebase/database"
 import { rooms as roomOptions } from "@/sections/Rooms"
 import ProgressBar from "../components/ProgressBar"
-import dynamic from "next/dynamic";
-const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), { ssr: false });
 
 export default function ReservationPage() {
   const router = useRouter()
@@ -135,8 +133,48 @@ export default function ReservationPage() {
 
   const handleBack = () => setStep(1)
 
-  const [recaptchaToken, setRecaptchaToken] = useState(null);
-  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
+  // --- reCAPTCHA state ---
+  const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [recaptchaError, setRecaptchaError] = useState("");
+  const recaptchaRef = useRef(null);
+
+  // --- Gmail send error state ---
+  const [emailError, setEmailError] = useState("");
+
+  // --- reCAPTCHA site key ---
+  const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
+
+  // --- Load reCAPTCHA script on mount ---
+  useEffect(() => {
+    if (!RECAPTCHA_SITE_KEY) return;
+    if (window.grecaptcha) return;
+    const script = document.createElement("script");
+    script.src = `https://www.google.com/recaptcha/api.js?render=explicit`;
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, [RECAPTCHA_SITE_KEY]);
+
+  // --- Render reCAPTCHA widget when step 2 is shown ---
+  useEffect(() => {
+    if (step !== 2 || !RECAPTCHA_SITE_KEY) return;
+    setTimeout(() => {
+      if (window.grecaptcha && recaptchaRef.current && !recaptchaRef.current.hasChildNodes()) {
+        window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: RECAPTCHA_SITE_KEY,
+          callback: (token) => {
+            setRecaptchaToken(token);
+            setRecaptchaError("");
+          },
+          "expired-callback": () => setRecaptchaToken(""),
+          "error-callback": () => setRecaptchaError("reCAPTCHA failed. Please try again."),
+        });
+      }
+    }, 300);
+  }, [step, RECAPTCHA_SITE_KEY]);
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -156,14 +194,11 @@ export default function ReservationPage() {
     if (!form.city) errors.push("City is required.");
     if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email)) errors.push("Valid email address is required.");
     if (!form.agree) errors.push("You must agree to the terms and conditions.");
+    if (!recaptchaToken) errors.push("Please complete the reCAPTCHA.");
 
     const suitability = multiSuitability();
     if (!suitability.ok) {
       errors.push(suitability.reason + ". Please add more rooms.");
-    }
-
-    if (!recaptchaToken) {
-      errors.push("Please complete the reCAPTCHA.");
     }
 
     if (errors.length > 0) {
@@ -171,22 +206,34 @@ export default function ReservationPage() {
       return;
     }
 
-    setSubmitting(true)
+    // --- Verify reCAPTCHA token with backend ---
+    setRecaptchaError("");
     try {
-      // 1. Verify reCAPTCHA
       const recaptchaRes = await fetch("/api/verify-recaptcha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: recaptchaToken, gmail: form.email, message: "Reservation attempt" }),
+        body: JSON.stringify({ token: recaptchaToken }),
       });
       const recaptchaJson = await recaptchaRes.json();
       if (!recaptchaJson.success) {
-        setSubmitting(false);
-        alert("reCAPTCHA verification failed. Please try again.");
-        setRecaptchaToken(null);
+        setRecaptchaError("reCAPTCHA verification failed. Please try again.");
+        setRecaptchaToken("");
+        if (window.grecaptcha && recaptchaRef.current) {
+          window.grecaptcha.reset();
+        }
         return;
       }
+    } catch (err) {
+      setRecaptchaError("reCAPTCHA verification failed. Please try again.");
+      setRecaptchaToken("");
+      if (window.grecaptcha && recaptchaRef.current) {
+        window.grecaptcha.reset();
+      }
+      return;
+    }
 
+    setSubmitting(true)
+    try {
       // Calculate room numbers and total price
       const bookedRooms = selectedRooms.length
         ? selectedRooms
@@ -196,15 +243,9 @@ export default function ReservationPage() {
       const roomNumbers = bookedRooms.map((sr) => sr.room.id);
       const totalPriceValue = (bookedRooms.reduce((sum, sr) => sum + ((sr.room.price || 0) * sr.qty), 0) + (breakfastType ? totalGuests * breakfastPrices[breakfastType] : 0)) * nights;
 
-      // Always use YYYY-MM-DD and if check-in and check-out are the same, set check-out to next day
-      let checkInDate = ci ? new Date(ci) : checkIn ? new Date(checkIn) : null;
-      let checkOutDate = co ? new Date(co) : checkOut ? new Date(checkOut) : null;
-      if (checkInDate && checkOutDate && checkInDate.toDateString() === checkOutDate.toDateString()) {
-        checkOutDate.setDate(checkOutDate.getDate() + 1);
-      }
       const payload = {
-        checkIn: checkInDate ? checkInDate.toISOString().slice(0, 10) : "",
-        checkOut: checkOutDate ? checkOutDate.toISOString().slice(0, 10) : "",
+        checkIn: ci ? ci.toISOString().slice(0, 10) : checkIn || "",
+        checkOut: co ? co.toISOString().slice(0, 10) : checkOut || "",
         nights,
         adults: Number(adults || 0),
         children: Number(children || 0),
@@ -229,26 +270,23 @@ export default function ReservationPage() {
 
       await push(dbRef(rtdb, "reservations"), payload)
 
-      // Send booking confirmation emails to user and admin
+      // --- Send confirmation email to guest ---
       try {
-        const emailRes = await fetch("/api/send-booking-email", {
+        const emailRes = await fetch("/api/send-reservation-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userEmail: form.email,
-            userName: form.firstName + (form.lastName ? " " + form.lastName : ""),
-            bookingDetails: payload,
+            to: payload.guest.email,
+            name: `${payload.guest.firstName} ${payload.guest.lastName}`,
+            reservation: payload,
           }),
         });
         const emailJson = await emailRes.json();
-        if (emailRes.ok) {
-          alert("Booking request saved. Email sent successfully!");
-        } else {
-          alert("Booking saved, but failed to send email: " + (emailJson?.error || emailJson?.message || "Unknown error"));
+        if (!emailJson.success) {
+          setEmailError("Reservation saved, but failed to send confirmation email.");
         }
-      } catch (emailErr) {
-        alert("Booking saved, but failed to send email: " + (emailErr?.message || "Unknown error"));
-        console.error("Failed to send booking emails:", emailErr);
+      } catch (err) {
+        setEmailError("Reservation saved, but failed to send confirmation email.");
       }
 
       const buildIcsForReservation = (guest, startDateIso, endDateIso) => {
@@ -453,148 +491,127 @@ export default function ReservationPage() {
   return ( 
     <div className="reservation-page">
       <aside className={`aside ${showSummary ? "visible" : ""}`} aria-hidden={mounted && isClientSmall ? !showSummary : false}>
-        <div className="full-details">
-          <h3 className="heading">DATES</h3>
-          <div className="aside-body">
-            <div className="info-row">
-              <strong>Check-In</strong>
-              <span>{ci ? format(ci, "EEE, MMM dd") : "-"}</span>
-            </div>
-            <div className="info-row">
-              <strong>Check-Out</strong>
-              <span>{co ? format(co, "EEE, MMM dd") : "-"}</span>
-            </div>
-            <div className="info-row highlight">
-              <strong>Total Nights</strong>
-              <span>{nights}</span>
-            </div>
-          </div>
-
-          <hr className="divider" />
-
-          <h4 className="subheading">GUESTS</h4>
-          <div className="guest-info">
-            <div className="guest-pill">
-              <span className="guest-icon">👤</span>
-              <span>{adults} Adults</span>
-            </div>
-            <div className="guest-pill">
-              <span className="guest-icon">👶</span>
-              <span>{children} Children</span>
-            </div>
-          </div>
-
-          <hr className="divider" />
-
-          <h4 className="subheading">SELECTED ROOMS</h4>
-          <div className="selected-room">
-            {selectedRooms.length === 0 ? (
-              <div className="empty-state">
-                <div className="room-title">
-                  {selectedRoom ? `ROOM-${selectedRoom.roomNumber || selectedRoom.id}. ${selectedRoom.title}` : "No room selected"}
-                </div>
-                <div className="room-price">Price per night: {selectedRoom ? `${selectedRoom.price}$` : "-"}</div>
+        {/* Desktop/full view: show summary always */}
+        {!isClientSmall && (
+          <div className="full-details desktop-summary">
+            <h3 className="heading">DATES</h3>
+            <div className="aside-body">
+              <div className="info-row"> 
+                <strong>Check-In</strong>
+                <span>{ci ? format(ci, "EEE, MMM dd") : "-"}</span>
               </div>
-            ) : (
-              <>
-                <div className="room-list">
-                  {selectedRooms.map((sr, idx) => (
-                    <div key={sr.room.id} className="room-item" style={{animationDelay: `${idx * 0.1}s`}}>
-                      <div className="room-info">
-                        <div className="room-title-line">
-                          ROOM-{sr.room.roomNumber || sr.room.id}. {sr.room.title}
-                          <span className="qty-badge">×{sr.qty}</span>
+              <div className="info-row">
+                <strong>Check-Out</strong>
+                <span>{co ? format(co, "EEE, MMM dd") : "-"}</span>
+              </div>
+              <div className="info-row highlight">
+                <strong>Total Nights</strong>
+                <span>{nights}</span>
+              </div>
+            </div>
+            <hr className="divider" />
+            <h4 className="subheading">GUESTS</h4>
+            <div className="guest-info">
+              <div className="guest-pill">
+                <span className="guest-icon">👤</span>
+                <span>{adults} Adults</span>
+              </div>
+              <div className="guest-pill">
+                <span className="guest-icon">👶</span>
+                <span>{children} Children</span>
+              </div>
+            </div>
+            <hr className="divider" />
+            <h4 className="subheading">SELECTED ROOMS</h4>
+            <div className="selected-room">
+              {selectedRooms.length === 0 ? (
+                <div className="empty-state">
+                  <div className="room-title">
+                    {selectedRoom ? `ROOM-${selectedRoom.roomNumber || selectedRoom.id}. ${selectedRoom.title}` : "No room selected"}
+                  </div>
+                  <div className="room-price">Price per night: {selectedRoom ? `${selectedRoom.price}$` : "-"}</div>
+                </div>
+              ) : (
+                <>
+                  <div className="room-list">
+                    {selectedRooms.map((sr, idx) => (
+                      <div key={sr.room.id} className="room-item" style={{animationDelay: `${idx * 0.1}s`}}>
+                        <div className="room-info">
+                          <div className="room-title-line">
+                            ROOM-{sr.room.roomNumber || sr.room.id}. {sr.room.title}
+                            <span className="qty-badge">×{sr.qty}</span>
+                          </div>
+                          <div className="room-meta-line">{formatRoomMeta(sr.room)}</div>
                         </div>
-                        <div className="room-meta-line">{formatRoomMeta(sr.room)}</div>
+                        <div className="room-price-info">
+                          <div className="price-total">${((sr.room.price || 0) * sr.qty).toFixed(2)}</div>
+                          <div className="price-per">${(sr.room.price || 0).toFixed(2)} / night</div>
+                        </div>
                       </div>
-                      <div className="room-price-info">
-                        <div className="price-total">${((sr.room.price || 0) * sr.qty).toFixed(2)}</div>
-                        <div className="price-per">${(sr.room.price || 0).toFixed(2)} / night</div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  {(() => {
+                    const s = multiSuitability()
+                    return !s.ok ? (
+                      <div className="suitability-warning">{`Not suitable: ${s.reason}`}</div>
+                    ) : (
+                      <div className="suitability-success">Selected rooms cover your guest count</div>
+                    )
+                  })()}
+                </>
+              )}
+              <div className="price-breakdown">
+                <div className="price-row">
+                  <span>Space Price</span>
+                  <span>{selectedRooms.length ? `${selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$` : (selectedRoom ? `${(selectedRoom.price).toFixed(2)}$` : "-")}</span>
                 </div>
-                {(() => {
-                  const s = multiSuitability()
-                  return !s.ok ? (
-                    <div className="suitability-warning">{`Not suitable: ${s.reason}`}</div>
-                  ) : (
-                    <div className="suitability-success">Selected rooms cover your guest count</div>
-                  )
-                })()}
-              </>
-            )}
-            
-            <div className="price-breakdown">
-              <div className="price-row">
-                <span>Space Price</span>
-                <span>{selectedRooms.length ? `${selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$` : (selectedRoom ? `${(selectedRoom.price).toFixed(2)}$` : "-")}</span>
-              </div>
-              <div className="price-row">
-                <span>Tax</span>
-                <span className="free-tag">FREE</span>
-              </div>
-              <div className="price-row">
-                <span>
-                  Breakfast <span style={{ color: "red" }}>*</span>
-                </span>
-                <div>
-                  <select
-                    value={breakfastType}
-                    onChange={handleBreakfastTypeChange}
-                    className="breakfast-select"
-                  >
-                    <option value="">Not included</option>
-                    <option value="sriLanka">Sri Lanka - 3.32$</option>
-                    <option value="continental">Continental - 4.20$/pp</option>
-                  </select>
+                <div className="price-row">
+                  <span>Tax</span>
+                  <span className="free-tag">FREE</span>
                 </div>
-              </div>
-              <div className="price-row total-row">
-                <span>Total</span>
-                <span className="total-amount">${(totalPrice * nights).toFixed(2)}</span>
+                <div className="price-row">
+                  <span>
+                    Breakfast <span style={{ color: "red" }}>*</span>
+                  </span>
+                  <div>
+                    <select
+                      value={breakfastType}
+                      onChange={handleBreakfastTypeChange}
+                      className="breakfast-select"
+                    >
+                      <option value="">Not included</option>
+                      <option value="sriLanka">Sri Lanka - 3.32$</option>
+                      <option value="continental">Continental - 4.20$/pp</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="price-row total-row">
+                  <span>Total</span>
+                  <span className="total-amount">${(totalPrice * nights).toFixed(2)}</span>
+                </div>
               </div>
             </div>
+            <button 
+              type="button" 
+              className="aside-continue" 
+              onClick={handleAsideContinue} 
+              disabled={!(selectedRooms.length > 0 || selectedRoom)}
+              style={{ display: step === 1 ? "block" : "none" }}
+            >
+              Continue to Guest Details →
+            </button>
           </div>
-
-          <button 
-            type="button" 
-            className="aside-continue" 
-            onClick={handleAsideContinue} 
-            disabled={!(selectedRooms.length > 0 || selectedRoom)}
-            style={{ display: step === 1 ? "block" : "none" }} // Hide button when in Guest Details section
-          >
-            Continue to Guest Details →
-          </button>
-        </div>
-
-        <div className={`total-preview${showSummary ? " open" : ""}`} role="button" tabIndex={0} onClick={() => setShowSummary((s) => !s)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowSummary((s) => !s) }} aria-expanded={showSummary}>
-          <div className="total-left">TOTAL</div>
-          <div className="total-right">
-            {selectedRooms.length
-              ? `${(selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0) * Math.max(1, nights)).toFixed(2)}$`
-              : selectedRoom
-              ? `${(selectedRoom.price * Math.max(1, nights)).toFixed(2)}$`
-              : "-"}
-          </div>
-          <div className={`chev ${showSummary ? "open" : ""}`}>▾</div>
-        </div>
+        )}
       </aside>
 
       <main className="main">
-        <div className="mobile-toggle">
-          <button type="button" className="toggle-btn" onClick={() => setShowSummary((s) => !s)} aria-expanded={showSummary}>
-            {showSummary ? "Hide summary" : "Show summary"}
-          </button>
-        </div>
-
         <ProgressBar currentStep={step} />
-
         {saved ? (
           <div className="saved-state">
             <div className="success-icon">✓</div>
             <h2>Reservation Confirmed!</h2>
             <p>Your booking has been saved. A team member will contact you shortly.</p>
+            {emailError && <div style={{ color: "#dc2626", marginTop: 16 }}>{emailError}</div>}
           </div>
         ) : (
           <>
@@ -612,34 +629,27 @@ export default function ReservationPage() {
                       const tempList = already ? selectedRooms : [...selectedRooms, { room: r, qty: 1 }]
                       const suitability = multiSuitability(tempList)
                       return (
-                        <div key={r.id} className={`room-card ${already ? "selected" : ""}`} style={{animationDelay: `${idx * 0.1}s`}}>
-                          <div className="room-img" style={{ backgroundImage: `url(${r.img})` }}>
-                            {already && <div className="selected-badge">✓ Selected</div>}
+                        <div key={r.id} className={`room-card mobile-room-card ${already ? "selected" : ""}`} style={{animationDelay: `${idx * 0.1}s`}}>
+                          <div className="room-img mobile-room-img" style={{ backgroundImage: `url(${r.img})` }}>
+                            {already && <div className="selected-badge mobile-selected-badge">✓ Selected</div>}
                           </div>
-                          <div className="room-content">
-                            <div className="room-header">
-                              <div className="room-name">ROOM-{r.roomNumber || r.id}. {r.title}</div>
-                              <div className="room-rate">${r.price} / night</div>
+                          <div className="room-content mobile-room-content">
+                            <div className="room-header mobile-room-header">
+                              <div className="room-name mobile-room-name">ROOM-{r.roomNumber || r.id}. {r.title}</div>
+                              <div className="room-rate mobile-room-rate">${r.price} <span className="mobile-room-night">/ night</span></div>
                             </div>
-                            <div className="room-meta">{formatRoomMeta(r)}</div>
+                            <div className="room-meta mobile-room-meta">{formatRoomMeta(r)}</div>
                             {!suitability.ok && (
                               <div className="warning-msg">{suitability.reason}</div>
                             )}
-                            <div className="room-actions">
+                            <div className="room-actions mobile-room-actions">
                               {!already ? (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
-                                  <button onClick={() => addRoom(r)} className="btn-add">Add</button>
-                                  {typeLimitMessage && typeLimitMessage.type === getTypeKey(r) && (
-                                    <div className="limit-msg">{typeLimitMessage.msg}</div>
-                                  )}
-                                </div>
+                                <button onClick={() => addRoom(r)} className="btn-add mobile-btn-add">Add</button>
                               ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
-                                  <button onClick={() => removeRoom(r)} className="btn-remove">Remove</button>
-                                  {typeLimitMessage && typeLimitMessage.type === getTypeKey(r) && (
-                                    <div className="limit-msg">{typeLimitMessage.msg}</div>
-                                  )}
-                                </div>
+                                <button onClick={() => removeRoom(r)} className="btn-remove mobile-btn-remove">Remove</button>
+                              )}
+                              {typeLimitMessage && typeLimitMessage.type === getTypeKey(r) && (
+                                <div className="limit-msg">{typeLimitMessage.msg}</div>
                               )}
                             </div>
                           </div>
@@ -648,6 +658,134 @@ export default function ReservationPage() {
                     })
                   )}
                 </div>
+                {/* Fixed total bar for mobile */}
+                <div className="mobile-total-bar">
+                  <div className="mobile-total-label">TOTAL</div>
+                  <div className="mobile-total-value">
+                    {selectedRooms.length
+                      ? `${(selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0) * Math.max(1, nights)).toFixed(2)}$`
+                      : selectedRoom
+                      ? `${(selectedRoom.price * Math.max(1, nights)).toFixed(2)}$`
+                      : "-"}
+                  </div>
+                  <button className="mobile-next-btn" onClick={handleAsideContinue} disabled={!(selectedRooms.length > 0 || selectedRoom)}>
+                    NEXT
+                  </button>
+                </div>
+                <button type="button" className="mobile-show-summary" onClick={() => setShowSummary((s) => !s)}>
+                  {showSummary ? "Hide summary" : "Show summary"}
+                </button>
+                {/* Show summary details under the button on mobile when open */}
+                {showSummary && (
+                  <div className="full-details mobile-summary">
+                    <h3 className="heading">DATES</h3>
+                    <div className="aside-body">
+                      <div className="info-row">
+                        <strong>Check-In</strong>
+                        <span>{ci ? format(ci, "EEE, MMM dd") : "-"}</span>
+                      </div>
+                      <div className="info-row">
+                        <strong>Check-Out</strong>
+                        <span>{co ? format(co, "EEE, MMM dd") : "-"}</span>
+                      </div>
+                      <div className="info-row highlight">
+                        <strong>Total Nights</strong>
+                        <span>{nights}</span>
+                      </div>
+                    </div>
+                    <hr className="divider" />
+                    <h4 className="subheading">GUESTS</h4>
+                    <div className="guest-info">
+                      <div className="guest-pill">
+                        <span className="guest-icon">👤</span>
+                        <span>{adults} Adults</span>
+                      </div>
+                      <div className="guest-pill">
+                        <span className="guest-icon">👶</span>
+                        <span>{children} Children</span>
+                      </div>
+                    </div>
+                    <hr className="divider" />
+                    <h4 className="subheading">SELECTED ROOMS</h4>
+                    <div className="selected-room">
+                      {selectedRooms.length === 0 ? (
+                        <div className="empty-state">
+                          <div className="room-title">
+                            {selectedRoom ? `ROOM-${selectedRoom.roomNumber || selectedRoom.id}. ${selectedRoom.title}` : "No room selected"}
+                          </div>
+                          <div className="room-price">Price per night: {selectedRoom ? `${selectedRoom.price}$` : "-"}</div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="room-list">
+                            {selectedRooms.map((sr, idx) => (
+                              <div key={sr.room.id} className="room-item" style={{animationDelay: `${idx * 0.1}s`}}>
+                                <div className="room-info">
+                                  <div className="room-title-line">
+                                    ROOM-{sr.room.roomNumber || sr.room.id}. {sr.room.title}
+                                    <span className="qty-badge">×{sr.qty}</span>
+                                  </div>
+                                  <div className="room-meta-line">{formatRoomMeta(sr.room)}</div>
+                                </div>
+                                <div className="room-price-info">
+                                  <div className="price-total">${((sr.room.price || 0) * sr.qty).toFixed(2)}</div>
+                                  <div className="price-per">${(sr.room.price || 0).toFixed(2)} / night</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {(() => {
+                            const s = multiSuitability()
+                            return !s.ok ? (
+                              <div className="suitability-warning">{`Not suitable: ${s.reason}`}</div>
+                            ) : (
+                              <div className="suitability-success">Selected rooms cover your guest count</div>
+                            )
+                          })()}
+                        </>
+                      )}
+                      <div className="price-breakdown">
+                        <div className="price-row">
+                          <span>Space Price</span>
+                          <span>{selectedRooms.length ? `${selectedRooms.reduce((s, sr) => s + ((sr.room.price || 0) * sr.qty), 0).toFixed(2)}$` : (selectedRoom ? `${(selectedRoom.price).toFixed(2)}$` : "-")}</span>
+                        </div>
+                        <div className="price-row">
+                          <span>Tax</span>
+                          <span className="free-tag">FREE</span>
+                        </div>
+                        <div className="price-row">
+                          <span>
+                            Breakfast <span style={{ color: "red" }}>*</span>
+                          </span>
+                          <div>
+                            <select
+                              value={breakfastType}
+                              onChange={handleBreakfastTypeChange}
+                              className="breakfast-select"
+                            >
+                              <option value="">Not included</option>
+                              <option value="sriLanka">Sri Lanka - 3.32$</option>
+                              <option value="continental">Continental - 4.20$/pp</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="price-row total-row">
+                          <span>Total</span>
+                          <span className="total-amount">${(totalPrice * nights).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                      className="aside-continue" 
+                      onClick={handleAsideContinue} 
+                      disabled={!(selectedRooms.length > 0 || selectedRoom)}
+                      style={{ display: step === 1 ? "block" : "none" }}
+                    >
+                      Continue to Guest Details →
+                    </button>
+                  </div>
+                )}
               </section>
             )}
 
@@ -705,13 +843,12 @@ export default function ReservationPage() {
                       <input name="agree" id="agree" type="checkbox" checked={form.agree} onChange={handleChange} required />
                       <label htmlFor="agree">By clicking here, I state that I have read and understood the terms and conditions.</label>
                     </div>
-                    {/* Add reCAPTCHA widget */}
-                    <div className="form-field full" style={{ margin: "10px 0" }}>
-                      {siteKey && (
-                        <ReCAPTCHA
-                          sitekey={siteKey}
-                          onChange={token => setRecaptchaToken(token)}
-                        />
+
+                    <div className="form-field full">
+                      {/* reCAPTCHA widget */}
+                      <div ref={recaptchaRef} style={{ minHeight: 78, marginBottom: 8 }} />
+                      {recaptchaError && (
+                        <div style={{ color: "#dc2626", fontSize: 13, marginTop: 4 }}>{recaptchaError}</div>
                       )}
                     </div>
                   </div>
@@ -728,6 +865,164 @@ export default function ReservationPage() {
       </main>
 
       <style jsx>{`
+        /* --- Mobile UI Custom Styles --- */
+        @media (max-width: 768px) {
+          .mobile-room-card {
+            border: 2px solid #10b981;
+            border-radius: 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 12px rgba(16,185,129,0.08);
+            overflow: hidden;
+            background: #fff;
+          }
+          .mobile-room-img {
+            height: 180px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+          }
+          .mobile-selected-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #10b981;
+            color: #fff;
+            padding: 7px 18px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 700;
+            z-index: 2;
+            box-shadow: 0 2px 8px rgba(16,185,129,0.18);
+          }
+          .mobile-room-content {
+            padding: 18px 14px 10px 14px;
+          }
+          .mobile-room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+          }
+          .mobile-room-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: #222;
+          }
+          .mobile-room-rate {
+            font-size: 16px;
+            font-weight: 700;
+            color: #10b981;
+          }
+          .mobile-room-night {
+            font-size: 13px;
+            color: #888;
+            font-weight: 400;
+          }
+          .mobile-room-meta {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+          }
+          .mobile-room-actions {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+          }
+          .mobile-btn-remove {
+            width: 100%;
+            background: #fff0f0;
+            color: #dc2626;
+            border: 2px solid #dc2626;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 13px 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            box-shadow: none;
+          }
+          .mobile-btn-remove:hover {
+            background: #dc2626;
+            color: #fff;
+          }
+          .mobile-btn-add {
+            width: 100%;
+            background: #10b981;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 13px 0;
+            margin-bottom: 0;
+          }
+          .mobile-total-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 60px;
+            z-index: 100;
+            background: #111;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px;
+            font-size: 18px;
+            font-weight: 700;
+            box-shadow: 0 -2px 16px rgba(0,0,0,0.08);
+          }
+          .mobile-total-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+          }
+          .mobile-total-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            margin-left: 10px;
+            margin-right: 10px;
+          }
+          .mobile-next-btn {
+            background: #10b981;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 10px 22px;
+            margin-left: 10px;
+            box-shadow: 0 2px 8px rgba(16,185,129,0.18);
+            cursor: pointer;
+            transition: background 0.2s;
+          }
+          .mobile-next-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+          .mobile-show-summary {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 101;
+            background: #fff;
+            color: #222;
+            border: none;
+            border-radius: 0;
+            font-size: 17px;
+            font-weight: 700;
+            padding: 18px 0 18px 0;
+            box-shadow: 0 -2px 16px rgba(0,0,0,0.08);
+            text-align: center;
+          }
+          /* Add bottom padding to room-section so content is not hidden behind the fixed bar */
+          .room-section {
+            padding-bottom: 140px;
+          }
+        }
         @keyframes fadeInUp {
           from {
             opacity: 0;
@@ -1099,27 +1394,6 @@ export default function ReservationPage() {
           animation: fadeInUp 0.6s ease 0.2s both;
         }
 
-        .mobile-toggle {
-          display: block;
-          margin-bottom: 16px;
-        }
-
-        .toggle-btn {
-          width: 100%;
-          padding: 12px;
-          border-radius: 10px;
-          border: 2px solid #e5e7eb;
-          background: white;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .toggle-btn:hover {
-          border-color: #667eea;
-          background: #f8f9ff;
-        }
-
         /* New Step Progress Bar Styles */
         .step-header {
           display: flex;
@@ -1261,9 +1535,19 @@ export default function ReservationPage() {
 
         .room-img {
           height: 200px;
-          background-size: cover;
-          background-position: center;
+          background: #f3f4f6;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           position: relative;
+        }
+
+        .room-img img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: cover;
+          object-position: center;
+          border-radius: 16px;
         }
 
         .selected-badge {
@@ -1296,7 +1580,7 @@ export default function ReservationPage() {
         }
 
         .room-rate {
-          color: #667eea;
+          color: #10b981;
           font-weight: 700;
           font-size: 16px;
         }
@@ -1562,77 +1846,25 @@ export default function ReservationPage() {
         }
 
         @media (max-width: 768px) {
-          .aside .full-details {
+          .desktop-summary {
             display: none;
           }
-
-          .aside.visible .full-details {
+          .mobile-summary {
             display: block;
             margin-bottom: 12px;
             animation: fadeInUp 0.4s ease;
           }
-
-          .aside .total-preview {
-            display: flex;
+        }
+        @media (min-width: 769px) {
+          .mobile-show-summary,
+          .mobile-summary {
+            display: none !important;
           }
-
-          .connector-line {
-            width: 80px;
-          }
-
-          .step-circle {
-            width: 45px;
-            height: 45px;
-            font-size: 16px;
-          }
-
-          .step-label {
-            font-size: 12px;
+          .desktop-summary {
+            display: block;
           }
         }
-
-        @media (max-width: 480px) {
-          .step-header {
-            padding: 0 10px;
-          }
-
-          .connector-line {
-            width: 60px;
-          }
-
-          .step-circle {
-            width: 40px;
-            height: 40px;
-            font-size: 14px;
-          }
-
-          .heart-icon {
-            font-size: 18px;
-          }
-
-          .step-label-box {
-            top: 50px;
-          }
-
-          .step-label {
-            font-size: 11px;
-          }
-        }
-
-        :global(body.reservation-navbar-black nav),
-        :global(body.reservation-navbar-black .navbar),
-        :global(body.reservation-navbar-black header),
-        :global(body.reservation-navbar-black .header) {
-          background-color: #000 !important;
-          color: #fff !important;
-        }
-        
-        :global(body.reservation-navbar-black nav a),
-        :global(body.reservation-navbar-black .navbar a),
-        :global(body.reservation-navbar-black header a),
-        :global(body.reservation-navbar-black .header a) {
-          color: #fff !important;
-        }
+        /* ...existing code... */
       `}</style>
     </div>
   )
