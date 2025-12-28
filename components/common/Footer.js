@@ -18,6 +18,7 @@ const Footer = () => {
   const [gmail, setGmail] = useState(""); // new state for gmail
   const [status, setStatus] = useState("");
   const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [loading, setLoading] = useState(false);
   const recaptchaRef = useRef(null);
 
   const handleSubmit = async (e) => {
@@ -35,6 +36,7 @@ const Footer = () => {
       setStatus("Please complete the reCAPTCHA.");
       return;
     }
+    setLoading(true);
     try {
       // 1. Verify reCAPTCHA token with your backend, send gmail as well
       const verifyRes = await fetch("/api/verify-recaptcha", {
@@ -45,6 +47,7 @@ const Footer = () => {
       const verifyData = await verifyRes.json();
       if (!verifyData.success) {
         setStatus("reCAPTCHA failed. Please try again.");
+        setLoading(false);
         return;
       }
 
@@ -62,6 +65,7 @@ const Footer = () => {
     } catch (error) {
       setStatus("Failed to send. Try again.");
     }
+    setLoading(false);
   };
   return (
     <>
@@ -215,10 +219,14 @@ const Footer = () => {
                 ref={recaptchaRef}
               />
             </div>
-            <button type="submit" className="newsletter-submit">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-              </svg>
+            <button type="submit" className="newsletter-submit" disabled={loading}>
+              {loading ? (
+                <span style={{ fontSize: 16 }}>Sending...</span>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                </svg>
+              )}
             </button>
           </form>
           {status && (
