@@ -32,7 +32,7 @@ const Header = () => {
   // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (open && !e.target.closest('.mobile-nav') && !e.target.closest('.menu-toggle-btn')) {
+      if (open && !e.target.closest('.desktop-nav') && !e.target.closest('.menu-toggle-btn')) {
         setOpen(false)
       }
     }
@@ -82,7 +82,7 @@ const Header = () => {
             aria-label="Toggle menu"
             className="menu-toggle-btn"
           >
-            {open ? <AiOutlineClose size={24} /> : <RiMenu4Line size={24} />}
+            {open ? <AiOutlineClose size={24} style={{ pointerEvents: 'none' }} /> : <RiMenu4Line size={24} style={{ pointerEvents: 'none' }} />}
           </button>
 
           {/* Logo */}
@@ -121,23 +121,7 @@ const Header = () => {
             ))}
           </nav>
         </div>
-        {/* Mobile Navigation - REMOVE this block */}
-        {/* 
-        <div className={`mobile-nav ${open ? 'open' : ''}`}>
-          <div className="mobile-nav-content">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.href}
-                href={link.href} 
-                className={activeLink === link.href ? "mobile-nav-link active" : "mobile-nav-link"}
-                onClick={() => setOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-        */}
+        {/* Mobile Navigation removed, using original nav logic */}
         {/* Backdrop overlay for mobile menu */}
         {open && <div className="backdrop" onClick={() => setOpen(false)} />}
       </header>
@@ -156,18 +140,23 @@ const Header = () => {
 
         .menu-toggle-btn {
           display: none;
-          background: transparent;
+          background: rgba(255,255,255,0.08);
           border: none;
           color: #fff;
           cursor: pointer;
           padding: 8px;
-          border-radius: 6px;
-          transition: background 0.2s ease;
+          border-radius: 10px;
+          transition: background 0.2s;
           z-index: 1200;
+          min-width: 44px;
+          min-height: 44px;
+          align-items: center;
+          justify-content: center;
         }
 
-        .menu-toggle-btn:hover {
-          background: rgba(255, 255, 255, 0.1);
+        .menu-toggle-btn:hover, .menu-toggle-btn:focus {
+          background: rgba(255, 255, 255, 0.18);
+          outline: none;
         }
 
         .logo {

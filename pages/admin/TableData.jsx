@@ -255,7 +255,7 @@ const TableData = ({ setReservationCount }) => {
             </TableContainer>
           </div>
         </div>
-      </section>
+      </section> 
     </>
   )
 }

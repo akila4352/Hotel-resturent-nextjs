@@ -51,13 +51,20 @@ const Cards = ({ reservationCount }) => {
 
     fetchStats();
   }, [reservationCount]);
-
+ 
   // Chart configs
   const earningsData = {
     series: [stats.earnings],
     options: {
       chart: { type: "radialBar" },
-      plotOptions: { radialBar: { hollow: { size: "58%" }, dataLabels: { value: { show: true } } } },
+      plotOptions: {
+        radialBar: {
+          hollow: { size: "58%" },
+          dataLabels: {
+            value: { show: false }, // Hide the value label inside the circle
+          },
+        },
+      },
       labels: ["Earnings"],
       colors: ["#4CAF50"],
     },
@@ -92,7 +99,7 @@ const Cards = ({ reservationCount }) => {
             <ReactApexChart options={earningsData.options} series={earningsData.series} type="radialBar" height={150} />
           </div>
           <div className="title row">
-            <h1>USD {stats.earnings}</h1>
+            <h1>USD {stats.earnings.toFixed(2)}</h1>
             <p>Earnings</p>
           </div>
         </div>
