@@ -272,19 +272,15 @@ export default function ReservationPage() {
 
       // --- Send confirmation email to guest ---
       try {
-        const emailRes = await fetch("/api/send-reservation-email", {
+        await fetch("/api/send-booking-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            to: payload.guest.email,
-            name: `${payload.guest.firstName} ${payload.guest.lastName}`,
-            reservation: payload,
+            userEmail: payload.guest.email,
+            userName: `${payload.guest.firstName} ${payload.guest.lastName}`.trim(),
+            bookingDetails: payload,
           }),
         });
-        const emailJson = await emailRes.json();
-        if (!emailJson.success) {
-          setEmailError("Reservation saved, but failed to send confirmation email.");
-        }
       } catch (err) {
         setEmailError("Reservation saved, but failed to send confirmation email.");
       }
