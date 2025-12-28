@@ -11,15 +11,15 @@ const Restaurant2 = () => {
   // Filter menu items based on active tab
   const filteredMenu = dishdata.filter(item => item.category === activeMenuTab)
 
-  // Filter gallery items
+  // Filter gallery items - fixed to properly handle DRINK category
   const filteredGallery = activeGalleryTab === "ALL" 
     ? dishdata 
     : dishdata.filter(item => item.category === activeGalleryTab)
 
   const menuTabs = [
     { name: "BREAKFAST", time: "08:00 AM - 10:00 AM" },
-    { name: "LUNCH", time: "01:00 AM - 3:00 PM" },
-    { name: "DINNER", time: "08:00 AM - 10:00 PM" },
+    { name: "LUNCH", time: "01:00 PM - 3:00 PM" }, // Fixed: was 01:00 AM
+    { name: "DINNER", time: "08:00 PM - 10:00 PM" }, // Fixed: was 08:00 AM
     { name: "DRINK", time: "08:00 AM - 10:00 PM" }
   ]
 
@@ -87,57 +87,62 @@ const Restaurant2 = () => {
 
           {/* Menu Items */}
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            {filteredMenu.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  padding: '25px 0',
-                  borderBottom: '1px solid #e5e5e5'
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{
+            {filteredMenu.length > 0 ? (
+              filteredMenu.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '15px',
-                    marginBottom: '8px'
-                  }}>
-                    <span style={{
-                      width: '40px',
-                      height: '40px',
-                      background: '#d4af37',
-                      borderRadius: '4px',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    padding: '25px 0',
+                    borderBottom: '1px solid #e5e5e5'
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '20px'
+                      gap: '15px',
+                      marginBottom: '8px'
                     }}>
-                      {item.icon || '🍽️'}
-                    </span>
-                    <h4 style={{
-                      fontSize: '1.2rem',
-                      fontWeight: 'bold',
-                      color: '#333',
-                      textTransform: 'uppercase'
+                      <span style={{
+                        width: '40px',
+                        height: '40px',
+                        background: '#d4af37',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px'
+                      }}>
+                        {item.icon || '🍽️'}
+                      </span>
+                      <h4 style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 'bold',
+                        color: '#333',
+                        textTransform: 'uppercase'
+                      }}>
+                        {item.name}
+                      </h4>
+                    </div>
+                    <p style={{
+                      fontSize: '0.9rem',
+                      color: '#666',
+                      lineHeight: '1.6',
+                      marginLeft: '55px'
                     }}>
-                      {item.name}
-                    </h4>
+                      {item.description}
+                    </p>
                   </div>
-                  <p style={{
-                    fontSize: '0.9rem',
-                    color: '#666',
-                    lineHeight: '1.6',
-                    marginLeft: '55px'
-                  }}>
-                    {item.description}
-                  </p>
                 </div>
-                {/* Price section removed */}
-              </div>
-            ))}
+              ))
+            ) : (
+              <p style={{ textAlign: 'center', color: '#999', padding: '40px 0' }}>
+                No items available for this category
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -164,7 +169,7 @@ const Restaurant2 = () => {
             marginBottom: '40px',
             flexWrap: 'wrap'
           }}>
-            {['ALL', 'DINNER', 'LUNCH', 'DRINK'].map((tab) => (
+            {['ALL', 'BREAKFAST', 'LUNCH', 'DINNER', 'DRINK'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveGalleryTab(tab)}
@@ -194,51 +199,56 @@ const Restaurant2 = () => {
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
             gap: '20px'
           }}>
-            {filteredGallery.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  position: 'relative',
-                  overflow: 'hidden',
-                  borderRadius: '8px',
-                  height: '180px', // reduced gallery tile height
-                  cursor: 'pointer'
-                }}
-              >
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  width={320}   // reduced intrinsic width
-                  height={200}  // reduced intrinsic height
+            {filteredGallery.length > 0 ? (
+              filteredGallery.map((item) => (
+                <div
+                  key={item.id}
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: 'transform 0.3s ease'
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '8px',
+                    height: '180px',
+                    cursor: 'pointer'
                   }}
-                  onMouseEnter={(e) => e.target.style.transform = 'scale(1.1)'}
-                  onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
-                />
-                <div style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
-                  padding: '40px 20px 20px',
-                  color: 'white'
-                }}>
-                  <h4 style={{
-                    fontSize: '1.1rem',
-                    fontWeight: 'bold',
-                    marginBottom: '5px'
+                >
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    width={320}
+                    height={200}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      transition: 'transform 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.transform = 'scale(1.1)'}
+                    onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+                    padding: '40px 20px 20px',
+                    color: 'white'
                   }}>
-                    {item.name}
-                  </h4>
-                  {/* Price removed */}
+                    <h4 style={{
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      marginBottom: '5px'
+                    }}>
+                      {item.name}
+                    </h4>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p style={{ textAlign: 'center', color: '#999', padding: '40px 0', gridColumn: '1 / -1' }}>
+                No items available for this category
+              </p>
+            )}
           </div>
         </div>
       </section> 

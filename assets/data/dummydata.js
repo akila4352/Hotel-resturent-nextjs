@@ -42,9 +42,9 @@ export const home = [
 export const dishdata = [
   // BREAKFAST
   {
-    id: 1,
-    name: "ROAST & VEGETABLES",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    id: 0,
+    name: "Continental Breakfast",
+    description: "Fresh fruit plate or juice,Two eggs (fried or boiled),Toasted bread with butter and jam,Tea or coffee",
     price: "80",
     oldPrice: "100",
     category: "BREAKFAST",
@@ -52,139 +52,97 @@ export const dishdata = [
     icon: "🍳"
   },
   {
-    id: 2,
-    name: "MEAT SOUP",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    id: 22,
+    name: "Sri Lankan Breakfast",
+    description: "String hoppers or coconut roti,Dahl curry and coconut sambol,Coconut pancake or banana pancake,Tea or coffee",
+    price: "62.25",
+    oldPrice: "85",
+    category: "BREAKFAST",
+    image: "/images/19ed0388a13907e68e9e4ce6f2d861a1.jpg",
+    icon: "🥣"
+  },
+  {
+     id: 2,
+    name: "Omelet Breakfast",
+    description: "Sri Lankan omelet,Cheese omelet,Tomato and onion omelet",
     price: "62.25",
     oldPrice: "85",
     category: "BREAKFAST",
     image: "/images/dish2.jpg",
-    icon: "🥣"
+    icon: "🥞"
   },
-  {
+    {
     id: 3,
-    name: "PANCAKES",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    name: "Sandwich Breakfast",
+    description: "Egg sandwich,Cheese and tomato sandwich,Chicken sandwich",
     price: "45",
     oldPrice: "60",
     category: "BREAKFAST",
-    image: "/images/dish3.jpg",
+    image: "/images/images (5).jpeg",
     icon: "🥞"
   },
 
   // LUNCH
   {
     id: 4,
-    name: "GRILLED CHICKEN",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    name: "Rice and Curry",
+    description: "Steamed rice,Choice of chicken curry, fish curry, or vegetable curry,Dahl curry,Potato curry,Green salad,Papadum",
     price: "120",
     oldPrice: "150",
     category: "LUNCH",
-    image: "/images/dish4.jpg",
+    image: "/images/best-rice-and-curry.jpg",
     icon: "🍗"
   },
   {
     id: 5,
-    name: "SEAFOOD PASTA",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    name: "Fried Rice",
+    description: "Chicken fried rice or vegetable fried rice,Served with chicken curry or vegetable curry,Papadum and pickle",
     price: "95",
     oldPrice: "110",
     category: "LUNCH",
     image: "/images/dish5.jpg",
     icon: "🍝"
   },
-  {
-    id: 6,
-    name: "BEEF BURGER",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
-    price: "75",
-    oldPrice: "90",
-    category: "LUNCH",
-    image: "/images/dish6.jpg",
-    icon: "🍔"
-  },
-
   // DINNER
   {
     id: 7,
-    name: "STEAK & VEGETABLES",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    name: "String Hoppers Dinner",
+    description: "String hoppers (red or white),Chicken curry or fish curry,Dahl curry,Coconut sambol",
     price: "150",
     oldPrice: "180",
     category: "DINNER",
-    image: "/images/dish7.jpg",
+    image: "/images/images (6).jpeg",
     icon: "🥩"
   },
-  {
-    id: 8,
-    name: "LOBSTER SPECIAL",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
-    price: "200",
-    oldPrice: "250",
-    category: "DINNER",
-    image: "/images/dish8.jpg",
-    icon: "🦞"
-  },
-  {
-    id: 9,
-    name: "LAMB CURRY",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
-    price: "130",
-    oldPrice: "160",
-    category: "DINNER",
-    image: "/images/dish9.jpg",
-    icon: "🍛"
-  },
-
   // DRINK
   {
     id: 10,
-    name: "FRESH JUICE",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    name: "Hot Beverages",
+    description: "Ceylon tea,Coffee,Hot chocolate,Ginger tea,Herbal tea",
     price: "25",
     oldPrice: "35",
     category: "DRINK",
-    image: "/images/drink1.jpg",
+    image: "/images/images (7).jpeg",
     icon: "🍹"
   },
   {
     id: 11,
-    name: "COCKTAILS",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    name: "Cold Beverages",
+    description: "Fresh fruit juice ,Fresh lime juice,King coconut,Soft drinks,Bottled water",
     price: "45",
     oldPrice: "60",
     category: "DRINK",
-    image: "/images/drink2.jpg",
+    image: "/images/drink1.jpg",
     icon: "🍸"
   },
   {
     id: 12,
-    name: "COFFEE & TEA",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
+    name: "Fresh Juices",
+    description: "Mixed fruit juice,Avocado juice",
     price: "15",
     oldPrice: "20",
     category: "DRINK",
-    image: "/images/drink3.jpg",
-    icon: "☕"
-  },
-    {
-    id: 12,
-    name: "COFFEE & TEA",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
-    price: "15",
-    oldPrice: "20",
-    category: "DRINK",
-    image: "/images/drink4.jpg",
-    icon: "☕"
-  },
-    {
-    id: 12,
-    name: "COFFEE & TEA",
-    description: "Lorem ipsum is simply dummy text of the printing and typesetting industry",
-    price: "15",
-    oldPrice: "20",
-    category: "DRINK",
-    image: "/images/drink5.jpg",
+    image: "/images/360_F_139460703_68ql2mESojJSBBLq9aM8NnCR6En2QLaM.jpg",
     icon: "☕"
   }
 ]
@@ -320,7 +278,7 @@ export const roomsdata = [
     gallery: [
       "/images/single12.JPG",
       "/images/single13.JPG",
-      "/images/single14.JPG",
+      "/images/single14.JPG", 
       "/images/singletoilet.JPG"
       
     ],
