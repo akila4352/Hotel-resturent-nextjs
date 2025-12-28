@@ -6,23 +6,33 @@ import { BsFacebook } from "react-icons/bs"
 import { AiFillInstagram } from "react-icons/ai"
 import { FaAirbnb, FaTripadvisor } from "react-icons/fa"
 import { FaXTwitter } from "react-icons/fa6"
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { rtdb } from "../../lib/firebase";
-import { ref, push, serverTimestamp } from "firebase/database";
+import { ref, push } from "firebase/database";
 
 const Footer = () => {
   const [message, setMessage] = useState("");
-  const [gmail, setGmail] = useState(""); // new state for gmail
+  const [gmail, setGmail] = useState("");
   const [status, setStatus] = useState("");
   const recaptchaRef = useRef(null);
   const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
   const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+
+  // Debug: Log the site key on mount
+  useEffect(() => {
+    console.log('🔑 reCAPTCHA Site Key:', recaptchaSiteKey);
+    if (!recaptchaSiteKey) {
+      console.error('❌ NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not defined in .env.local');
+    }
+  }, [recaptchaSiteKey]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus("");
-    if (!gmail.trim() || !gmail.includes("@gmail.com")) {
-      setStatus("Please enter a valid Gmail address.");
+
+    if (!gmail.trim() || !gmail.includes("@")) {
+      setStatus("Please enter a valid email address.");
       return;
     }
     if (!message.trim()) {
@@ -33,85 +43,129 @@ const Footer = () => {
       setStatus("Please complete the reCAPTCHA.");
       return;
     }
+
     try { 
+      // Save to Firebase
       await push(ref(rtdb, "newsletterMessages"), {
         gmail,
         message,
         createdAt: Date.now(),
       });
+
       // Send email to admin
       const res = await fetch("/api/send-newsletter-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gmail, message, recaptchaToken }),
       });
-      if (!res.ok) throw new Error("Email failed");
-      setStatus("Message sent!");
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Email failed");
+      }
+
+      setStatus("Message sent successfully!");
       setMessage("");
       setGmail("");
       setRecaptchaToken("");
-      if (window.grecaptcha && recaptchaRef.current) {
+      
+      // Reset reCAPTCHA
+      if (window.grecaptcha) {
         window.grecaptcha.reset();
       }
     } catch (error) {
-      setStatus("Failed to send. Try again.");
+      console.error('Submit error:', error);
+      setStatus(error.message || "Failed to send. Please try again.");
     }
   };
 
-  // Load reCAPTCHA script and render widget safely
-  React.useEffect(() => {
-    // Only run on client
-    if (typeof window === "undefined") return;
+  // Load and render reCAPTCHA
+  useEffect(() => {
+    if (typeof window === "undefined" || !recaptchaSiteKey) return;
 
-    // If already rendered, do nothing
-    if (window.grecaptcha && typeof window.grecaptcha.render === "function" && recaptchaRef.current && recaptchaRef.current.childNodes.length === 0) {
-      window.grecaptcha.render(recaptchaRef.current, {
-        sitekey: recaptchaSiteKey,
-        callback: (token) => setRecaptchaToken(token),
-        "expired-callback": () => setRecaptchaToken(""),
-        "error-callback": () => setRecaptchaToken(""),
-      });
-      return;
-    }
+    let widgetId = null;
 
-    // If script already exists, wait for grecaptcha to be ready
-    if (window.grecaptcha) {
-      window.grecaptcha.ready(() => {
-        if (recaptchaRef.current && recaptchaRef.current.childNodes.length === 0) {
-          window.grecaptcha.render(recaptchaRef.current, {
-            sitekey: recaptchaSiteKey,
-            callback: (token) => setRecaptchaToken(token),
-            "expired-callback": () => setRecaptchaToken(""),
-            "error-callback": () => setRecaptchaToken(""),
-          });
-        }
-      });
-      return;
-    }
+    const renderRecaptcha = () => {
+      if (!window.grecaptcha || !recaptchaRef.current) return;
+      
+      // Check if already rendered
+      if (recaptchaRef.current.hasChildNodes()) {
+        console.log('✅ reCAPTCHA already rendered');
+        return;
+      }
 
-    // Otherwise, load the script
-    const scriptId = "recaptcha-script";
-    if (!document.getElementById(scriptId)) {
-      const script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoadCallback&render=explicit";
-      script.async = true;
-      script.defer = true;
-      document.body.appendChild(script);
-    }
-
-    // Define the callback globally
-    window.onRecaptchaLoadCallback = () => {
-      if (window.grecaptcha && recaptchaRef.current && recaptchaRef.current.childNodes.length === 0) {
-        window.grecaptcha.render(recaptchaRef.current, {
+      try {
+        widgetId = window.grecaptcha.render(recaptchaRef.current, {
           sitekey: recaptchaSiteKey,
-          callback: (token) => setRecaptchaToken(token),
-          "expired-callback": () => setRecaptchaToken(""),
-          "error-callback": () => setRecaptchaToken(""),
+          callback: (token) => {
+            console.log('✅ reCAPTCHA completed');
+            setRecaptchaToken(token);
+          },
+          'expired-callback': () => {
+            console.log('⚠️ reCAPTCHA expired');
+            setRecaptchaToken("");
+          },
+          'error-callback': () => {
+            console.error('❌ reCAPTCHA error - check site key and domain settings');
+            setRecaptchaToken("");
+            setStatus("reCAPTCHA error. Please refresh the page.");
+          },
         });
+        console.log('✅ reCAPTCHA rendered with widget ID:', widgetId);
+        setRecaptchaLoaded(true);
+      } catch (error) {
+        console.error('❌ Error rendering reCAPTCHA:', error);
       }
     };
-  }, [recaptchaRef, recaptchaSiteKey]);
+
+    // Check if script already exists
+    const existingScript = document.getElementById('recaptcha-script');
+    
+    if (window.grecaptcha) {
+      // grecaptcha already loaded
+      window.grecaptcha.ready(() => {
+        renderRecaptcha();
+      });
+    } else if (existingScript) {
+      // Script exists but not loaded yet
+      existingScript.addEventListener('load', () => {
+        window.grecaptcha.ready(() => {
+          renderRecaptcha();
+        });
+      });
+    } else {
+      // Load script for the first time
+      const script = document.createElement('script');
+      script.id = 'recaptcha-script';
+      script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      
+      script.onload = () => {
+        console.log('✅ reCAPTCHA script loaded');
+        window.grecaptcha.ready(() => {
+          renderRecaptcha();
+        });
+      };
+      
+      script.onerror = () => {
+        console.error('❌ Failed to load reCAPTCHA script');
+      };
+      
+      document.head.appendChild(script);
+    }
+
+    // Cleanup
+    return () => {
+      if (widgetId !== null && window.grecaptcha) {
+        try {
+          window.grecaptcha.reset(widgetId);
+        } catch (e) {
+          console.log('Cleanup error (safe to ignore):', e.message);
+        }
+      }
+    };
+  }, [recaptchaSiteKey]);
 
   return (
     <>
@@ -242,7 +296,7 @@ const Footer = () => {
           <form className="newsletter-form" onSubmit={handleSubmit}>
             <input 
               type="email"
-              placeholder="Enter your Gmail address"
+              placeholder="Enter your email address"
               className="newsletter-input"
               value={gmail}
               onChange={e => setGmail(e.target.value)}
@@ -257,20 +311,45 @@ const Footer = () => {
               onChange={e => setMessage(e.target.value)}
               required
             />
+            
+            {/* reCAPTCHA container */}
             <div
               ref={recaptchaRef}
               className="g-recaptcha"
-              style={{ margin: "12px 0" }}
-              data-sitekey={recaptchaSiteKey}
+              style={{ 
+                margin: "12px 0",
+                minHeight: "78px",
+                display: "flex",
+                justifyContent: "center"
+              }}
             ></div>
-            <button type="submit" className="newsletter-submit">
+
+            {!recaptchaLoaded && recaptchaSiteKey && (
+              <div style={{ color: "#999", fontSize: "12px", textAlign: "center" }}>
+                Loading reCAPTCHA...
+              </div>
+            )}
+
+            {!recaptchaSiteKey && (
+              <div style={{ color: "#ff6b6b", fontSize: "12px", textAlign: "center" }}>
+                ⚠️ reCAPTCHA not configured
+              </div>
+            )}
+
+            <button type="submit" className="newsletter-submit" disabled={!recaptchaSiteKey}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
               </svg>
             </button>
           </form>
+
           {status && (
-            <div style={{ color: status === "Message sent!" ? "#c9a961" : "#ff6b6b", marginTop: 8, fontSize: 14 }}>
+            <div style={{ 
+              color: status.includes("success") ? "#c9a961" : "#ff6b6b", 
+              marginTop: 8, 
+              fontSize: 14,
+              textAlign: "center"
+            }}>
               {status}
             </div>
           )}
@@ -358,8 +437,7 @@ const Footer = () => {
         .newsletter-submit {
           position: absolute;
           right: 5px;
-          top: 50%;
-          transform: translateY(-50%);
+          top: 8px;
           background: #c9a961;
           border: none;
           width: 45px;
@@ -373,8 +451,13 @@ const Footer = () => {
           color: #2a2a2a;
         }
 
-        .newsletter-submit:hover {
+        .newsletter-submit:hover:not(:disabled) {
           background: #d4b872;
+        }
+
+        .newsletter-submit:disabled {
+          background: #666;
+          cursor: not-allowed;
         }
 
         .social-icons {
@@ -425,8 +508,6 @@ const Footer = () => {
           </div>  
           
           <div className='footer-links'>
-            
-
             <Link href='/blogs' className='footer-link'>Contact Us</Link>
           </div>
 
