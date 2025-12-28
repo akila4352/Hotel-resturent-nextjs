@@ -3,38 +3,43 @@ import nodemailer from 'nodemailer';
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    res.status(405).json({ success: false, error: "Method not allowed" });
-    return;
+    return res.status(405).json({ success: false, error: "Method not allowed" });
   }
 
   const { token, gmail, message } = req.body;
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
-  if (!token || !secretKey) {
-    res.status(400).json({ success: false, error: "Missing token or secret key" });
-    return;
+  if (!token) {
+    return res.status(400).json({ success: false, error: "Missing reCAPTCHA token" });
+  }
+
+  if (!secretKey) {
+    return res.status(500).json({ success: false, error: "Server configuration error" });
   }
 
   if (!gmail || !message) {
-    res.status(400).json({ success: false, error: "Missing gmail or message" });
-    return;
+    return res.status(400).json({ success: false, error: "Missing gmail or message" });
   }
 
   try {
-    // 1. Verify reCAPTCHA
-    const response = await fetch(
-      `https://www.google.com/recaptcha/api/siteverify`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `secret=${secretKey}&response=${token}`,
-      }
-    );
+    // 1. Verify reCAPTCHA with Google
+    const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
+    
+    const response = await fetch(verifyURL, {
+      method: "POST",
+    });
+
     const data = await response.json();
 
+    console.log("reCAPTCHA verification response:", data);
+
     if (!data.success) {
-      res.status(400).json({ success: false, error: data["error-codes"] });
-      return;
+      console.error("reCAPTCHA verification failed:", data["error-codes"]);
+      return res.status(400).json({ 
+        success: false, 
+        error: "reCAPTCHA verification failed",
+        details: data["error-codes"]
+      });
     }
 
     // 2. Send email using Nodemailer
@@ -84,10 +89,10 @@ export default async function handler(req, res) {
 
     await transporter.sendMail(mailOptions);
 
-    // 3. Return success (Firebase save happens on client-side in Footer.jsx)
-    res.status(200).json({ success: true, message: "Email sent successfully" });
+    // 3. Return success
+    return res.status(200).json({ success: true, message: "Email sent successfully" });
   } catch (err) {
-    console.error("Error:", err);
-    res.status(500).json({ success: false, error: "Server error" });
+    console.error("Server error:", err);
+    return res.status(500).json({ success: false, error: "Server error", details: err.message });
   }
 }
