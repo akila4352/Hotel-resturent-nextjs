@@ -15,7 +15,7 @@ export default function App({ Component, pageProps }) {
       <div id="google_translate_element" style={{ display: "none" }} />
 
       {/* Custom Language Selector */}
-      <LanguageSelector />
+
 
       <Layout>
         <Component {...pageProps} />

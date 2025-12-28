@@ -5,7 +5,8 @@ import { useEffect, useState } from "react"
 import { RiMenu4Line } from "react-icons/ri"
 import { AiOutlineClose } from "react-icons/ai"
 import { FaGlobeAmericas } from "react-icons/fa"
-import Head from "next/head" // <-- Add this line
+import Head from "next/head"
+import ReactCountryFlag from "react-country-flag"
 
 const Header = () => {
   const [activeLink, setActiveLink] = useState("")
@@ -13,6 +14,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [zoom, setZoom] = useState(false)
   const [showLangDropdown, setShowLangDropdown] = useState(false)
+  const [currentLang, setCurrentLang] = useState({ code: 'en', countryCode: 'GB', label: 'English' })
 
   const router = useRouter()
   
@@ -35,10 +37,13 @@ const Header = () => {
       if (open && !e.target.closest('.desktop-nav') && !e.target.closest('.menu-toggle-btn')) {
         setOpen(false)
       }
+      if (showLangDropdown && !e.target.closest('.language-selector')) {
+        setShowLangDropdown(false)
+      }
     }
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
-  }, [open])
+  }, [open, showLangDropdown])
 
   const navLinks = [
     { href: '/', label: 'HOME' },
@@ -49,10 +54,31 @@ const Header = () => {
   ]
 
   const languages = [
-    { code: 'en', label: 'English', flag: '🇬🇧' },
-    { code: 'sv', label: 'Svenska', flag: '🇸🇪' },
-    { code: 'de', label: 'Deutsch', flag: '🇩🇪' }
+    { code: 'en', label: 'English', countryCode: 'GB' },
+    { code: 'sv', label: 'Svenska', countryCode: 'SE' },
+    { code: 'es', label: 'Español', countryCode: 'ES' },
+    { code: 'fr', label: 'Français', countryCode: 'FR' },
+    { code: 'de', label: 'Deutsch', countryCode: 'DE' },
+    { code: 'it', label: 'Italiano', countryCode: 'IT' },
+    { code: 'pt', label: 'Português', countryCode: 'PT' },
+    { code: 'ja', label: '日本語', countryCode: 'JP' },
+    { code: 'ko', label: '한국어', countryCode: 'KR' },
+    { code: 'zh-CN', label: '中文', countryCode: 'CN' },
+    { code: 'ar', label: 'العربية', countryCode: 'SA' },
+    { code: 'hi', label: 'हिन्दी', countryCode: 'IN' },
+    { code: 'si', label: 'සිංහල', countryCode: 'LK' }
   ]
+
+  const changeLanguage = (langCode, countryCode, label) => {
+    const googleTranslateSelect = document.querySelector('.goog-te-combo')
+    if (googleTranslateSelect) {
+      googleTranslateSelect.value = langCode
+      googleTranslateSelect.dispatchEvent(new Event('change'))
+      setCurrentLang({ code: langCode, countryCode: countryCode, label: label })
+      setShowLangDropdown(false)
+      setOpen(false)
+    }
+  }
 
   return (
     <>
@@ -107,7 +133,7 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Navigation - always rendered, but hidden on mobile unless menu is open */}
+          {/* Navigation */}
           <nav className={`desktop-nav${open ? ' show-on-mobile' : ''}`}>
             {navLinks.map((link) => (
               <Link 
@@ -119,9 +145,59 @@ const Header = () => {
                 {link.label}
               </Link>
             ))}
+            
+            {/* Language Selector as Nav Item */}
+            <div className="language-selector">
+              <button
+                className="nav-link lang-trigger"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowLangDropdown(!showLangDropdown)
+                }}
+                aria-label="Select language"
+              >
+                <ReactCountryFlag
+                  countryCode={currentLang.countryCode}
+                  svg
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '4px',
+                    objectFit: 'cover'
+                  }}
+                  title={currentLang.label}
+                />
+                <span className="lang-name">{currentLang.label}</span>
+              </button>
+
+              {showLangDropdown && (
+                <div className="lang-dropdown">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      className={`lang-option ${currentLang.code === lang.code ? 'active' : ''}`}
+                      onClick={() => changeLanguage(lang.code, lang.countryCode, lang.label)}
+                    >
+                      <ReactCountryFlag
+                        countryCode={lang.countryCode}
+                        svg
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '3px',
+                          objectFit: 'cover'
+                        }}
+                        title={lang.label}
+                      />
+                      <span>{lang.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
         </div>
-        {/* Mobile Navigation removed, using original nav logic */}
+
         {/* Backdrop overlay for mobile menu */}
         {open && <div className="backdrop" onClick={() => setOpen(false)} />}
       </header>
@@ -173,6 +249,7 @@ const Header = () => {
           justify-content: center;
           margin: 0 40px;
         }
+
         @media (max-width: 768px) {
           .desktop-nav {
             display: none;
@@ -203,6 +280,12 @@ const Header = () => {
           position: relative;
           padding: 8px 0;
           font-family: 'Playfair Display', serif !important;
+          background: none;
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
           text-shadow:
             1px 1px 0 #222,
             2px 2px 0 #222,
@@ -247,41 +330,39 @@ const Header = () => {
 
         .language-selector {
           position: relative;
-          z-index: 1150;
         }
 
-        .lang-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #fff;
-          padding: 8px 16px;
-          border-radius: 8px;
-          cursor: pointer;
+        .lang-trigger {
+          white-space: nowrap;
+          text-shadow: none !important;
+        }
+
+        .lang-trigger:hover {
+          text-shadow: none !important;
+        }
+
+        .lang-name {
           font-size: 14px;
           font-weight: 500;
-          transition: all 0.3s ease;
-        }
-
-        .lang-btn:hover {
-          background: rgba(255, 255, 255, 0.15);
-          border-color: rgba(255, 255, 255, 0.3);
+          letter-spacing: 1.2px;
+          text-shadow: none !important;
         }
 
         .lang-dropdown {
           position: absolute;
-          top: calc(100% + 8px);
+          top: calc(100% + 12px);
           right: 0;
-          background: rgba(20, 30, 50, 0.98);
+          background: rgba(15, 25, 40, 0.98);
           backdrop-filter: blur(10px);
           border: 1px solid rgba(255, 255, 255, 0.15);
           border-radius: 8px;
           overflow: hidden;
-          min-width: 160px;
+          min-width: 200px;
+          max-height: 400px;
+          overflow-y: auto;
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
           animation: slideDown 0.2s ease;
+          z-index: 2000;
         }
 
         @keyframes slideDown {
@@ -299,14 +380,16 @@ const Header = () => {
           width: 100%;
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
           padding: 12px 16px;
           background: transparent;
           border: none;
           color: rgba(255, 255, 255, 0.9);
           cursor: pointer;
           font-size: 14px;
-          transition: background 0.2s ease;
+          transition: all 0.2s ease;
+          text-align: left;
+          font-family: 'Playfair Display', serif;
         }
 
         .lang-option:hover {
@@ -314,106 +397,10 @@ const Header = () => {
           color: #fff;
         }
 
-        .flag {
-          font-size: 18px;
-        }
-
-        .mobile-nav {
-          position: fixed;
-          top: 70px;
-          left: 0;
-          width: 300px;
-          height: calc(100vh - 70px);
-          background: rgba(15, 25, 40, 0.98);
-          backdrop-filter: blur(10px);
-          transform: translateX(-100%);
-          transition: transform 0.3s ease;
-          z-index: 1090;
-          overflow-y: auto;
-          box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .mobile-nav.open {
-          transform: translateX(0);
-        }
-
-        .mobile-nav-content {
-          padding: 24px;
-        }
-
-        .mobile-nav-link {
-          display: block;
-          color: rgba(255, 255, 255, 0.9);
-          text-decoration: none;
-          font-size: 16px;
-          font-weight: 500;
-          letter-spacing: 1px;
-          padding: 16px 12px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          transition: all 0.3s ease;
-          font-family: 'Playfair Display', serif !important;
-          text-shadow:
-            1px 1px 0 #222,
-            2px 2px 0 #222,
-            3px 3px 1px #111,
-            4px 4px 2px #000,
-            0 5px 15px rgba(0,0,0,0.25),
-            0 1px 0 #fff,
-            0 2px 0 #fff,
-            0 3px 0 #fff;
-        }
-
-        .mobile-nav-link:hover,
-        .mobile-nav-link.active {
+        .lang-option.active {
+          background: rgba(255, 255, 255, 0.15);
           color: #fff;
-          background: rgba(255, 255, 255, 0.05);
-          padding-left: 20px;
-          font-family: 'Playfair Display', serif !important;
-          text-shadow:
-            1px 1px 0 #222,
-            2px 2px 0 #222,
-            3px 3px 1px #111,
-            4px 4px 2px #000,
-            0 5px 15px rgba(0,0,0,0.25),
-            0 1px 0 #fff,
-            0 2px 0 #fff,
-            0 3px 0 #fff;
-        }
-
-        .mobile-lang-section {
-          margin-top: 24px;
-          padding-top: 24px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .mobile-lang-title {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 12px;
           font-weight: 600;
-          letter-spacing: 1px;
-          text-transform: uppercase;
-          margin-bottom: 12px;
-          padding: 0 12px;
-        }
-
-        .mobile-lang-option {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          background: transparent;
-          border: none;
-          color: rgba(255, 255, 255, 0.9);
-          cursor: pointer;
-          font-size: 14px;
-          transition: all 0.2s ease;
-          border-radius: 6px;
-        }
-
-        .mobile-lang-option:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
         }
 
         .backdrop {
@@ -442,29 +429,38 @@ const Header = () => {
             display: flex;
           }
 
-          .desktop-nav {
-            display: none;
-          }
-
-          .language-selector {
-            display: none;
-          }
-
           .logo {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
           }
+
+          .lang-dropdown {
+            position: fixed;
+            top: auto;
+            right: 50%;
+            transform: translateX(50%);
+            width: 90vw;
+            max-width: 300px;
+          }
         }
 
-        @media (min-width: 769px) {
-          .mobile-nav {
-            display: none;
-          }
+        /* Scrollbar styling for language dropdown */
+        .lang-dropdown::-webkit-scrollbar {
+          width: 6px;
+        }
 
-          .backdrop {
-            display: none;
-          }
+        .lang-dropdown::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        .lang-dropdown::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 3px;
+        }
+
+        .lang-dropdown::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
         }
 
         /* 3D text effect styles for navigation links */
