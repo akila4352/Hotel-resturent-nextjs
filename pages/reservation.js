@@ -873,8 +873,10 @@ export default function ReservationPage() {
           }
           .mobile-room-img {
             height: 180px;
-            background-size: cover;
+            background-size: 120%; /* slightly zoomed in */
+            background-repeat: no-repeat;
             background-position: center;
+            background-color: #f3f4f6; /* fallback color */
             position: relative;
           }
           .mobile-selected-badge {
@@ -1017,6 +1019,11 @@ export default function ReservationPage() {
           /* Add bottom padding to room-section so content is not hidden behind the fixed bar */
           .room-section {
             padding-bottom: 140px;
+          }
+        }
+        @media (min-width: 769px) {
+          .mobile-total-bar {
+            display: none !important;
           }
         }
         @keyframes fadeInUp {
@@ -1536,6 +1543,9 @@ export default function ReservationPage() {
           align-items: center;
           justify-content: center;
           position: relative;
+          background-size: 120%; /* slightly zoomed in */
+          background-repeat: no-repeat;
+          background-position: center;
         }
 
         .room-img img {

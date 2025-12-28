@@ -4,6 +4,7 @@ import { format } from "date-fns"
 import { useRouter } from "next/router"
 import { rtdb } from "@/lib/firebase"
 import { ref as dbRef, onValue } from "firebase/database"
+import { rooms as roomOptions } from "@/sections/Rooms"
 
 export default function BookingBox({
   bookingRef,
@@ -363,6 +364,49 @@ export default function BookingBox({
     boxSizing: isStatic ? "border-box" : undefined,
   }
 
+  // Get selected room details for max adults/children validation
+  const selectedRoom = useMemo(() => {
+    if (!options?.roomType) return null
+    return roomOptions.find(
+      (r) => String(r.type).toLowerCase() === String(options.roomType).toLowerCase()
+    )
+  }, [options?.roomType])
+
+  // Helper to get max adults/children for selected room
+  const maxAdults = selectedRoom?.maxAdults ?? 4
+  const maxChildren = selectedRoom?.maxChildren ?? 2
+  const minAdults = selectedRoom?.minAdults ?? 1
+  const minChildren = selectedRoom?.minChildren ?? 0
+
+  // Validation for increment/decrement
+  const handleOptionValidated = (type, op) => {
+    if (!selectedRoom) {
+      handleOption(type, op)
+      return
+    }
+    if (type === "adult") {
+      if (op === "i" && options.adult >= maxAdults) {
+        alert(`Maximum adults for this room is ${maxAdults}.`)
+        return
+      }
+      if (op === "d" && options.adult <= minAdults) {
+        alert(`Minimum adults for this room is ${minAdults}.`)
+        return
+      }
+    }
+    if (type === "children") {
+      if (op === "i" && options.children >= maxChildren) {
+        alert(`Maximum children for this room is ${maxChildren}.`)
+        return
+      }
+      if (op === "d" && options.children <= minChildren) {
+        alert(`Minimum children for this room is ${minChildren}.`)
+        return
+      }
+    }
+    handleOption(type, op)
+  }
+
   return (
     <div
       ref={bookingRef}
@@ -470,7 +514,7 @@ export default function BookingBox({
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <button
-                onClick={() => handleOption("adult", "d")}
+                onClick={() => handleOptionValidated("adult", "d")}
                 style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, minWidth: 28, minHeight: 28 }}
                 aria-label="Decrease adults"
               >
@@ -480,7 +524,7 @@ export default function BookingBox({
               </button>
               <span style={{ minWidth: 24, textAlign: "center", color: "#000", fontSize: 14, fontWeight: 700 }}>{options.adult}</span>
               <button
-                onClick={() => handleOption("adult", "i")}
+                onClick={() => handleOptionValidated("adult", "i")}
                 style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, minWidth: 28, minHeight: 28 }}
                 aria-label="Increase adults"
               >
@@ -504,13 +548,13 @@ export default function BookingBox({
               <label style={{ fontSize: 11, color: "#000", fontWeight: 700 }}>Children</label>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <button onClick={() => handleOption("children", "d")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 28, minHeight: 28 }} aria-label="Decrease children">
+              <button onClick={() => handleOptionValidated("children", "d")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 28, minHeight: 28 }} aria-label="Decrease children">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                   <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
                 </svg>
               </button>
               <span style={{ minWidth: 24, textAlign: "center", color: "#000", fontSize: 14, fontWeight: 700 }}>{options.children}</span>
-              <button onClick={() => handleOption("children", "i")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 28, minHeight: 28 }} aria-label="Increase children">
+              <button onClick={() => handleOptionValidated("children", "i")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 28, minHeight: 28 }} aria-label="Increase children">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                   <rect x="11" y="4" width="2" height="16" rx="1" fill="currentColor"/>
                   <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
