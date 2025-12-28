@@ -6,7 +6,7 @@ import { BsFacebook } from "react-icons/bs"
 import { AiFillInstagram } from "react-icons/ai"
 import { FaAirbnb, FaTripadvisor } from "react-icons/fa"
 import { FaXTwitter } from "react-icons/fa6"
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { rtdb } from "../../lib/firebase";
 import { ref, push, serverTimestamp } from "firebase/database";
 
@@ -14,6 +14,9 @@ const Footer = () => {
   const [message, setMessage] = useState("");
   const [gmail, setGmail] = useState(""); // new state for gmail
   const [status, setStatus] = useState("");
+  const recaptchaRef = useRef(null);
+  const [recaptchaToken, setRecaptchaToken] = useState("");
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,19 +29,90 @@ const Footer = () => {
       setStatus("Please enter a message.");
       return;
     }
+    if (!recaptchaToken) {
+      setStatus("Please complete the reCAPTCHA.");
+      return;
+    }
     try { 
       await push(ref(rtdb, "newsletterMessages"), {
         gmail,
         message,
         createdAt: Date.now(),
       });
+      // Send email to admin
+      const res = await fetch("/api/send-newsletter-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gmail, message, recaptchaToken }),
+      });
+      if (!res.ok) throw new Error("Email failed");
       setStatus("Message sent!");
       setMessage("");
       setGmail("");
+      setRecaptchaToken("");
+      if (window.grecaptcha && recaptchaRef.current) {
+        window.grecaptcha.reset();
+      }
     } catch (error) {
       setStatus("Failed to send. Try again.");
     }
   };
+
+  // Load reCAPTCHA script and render widget safely
+  React.useEffect(() => {
+    // Only run on client
+    if (typeof window === "undefined") return;
+
+    // If already rendered, do nothing
+    if (window.grecaptcha && typeof window.grecaptcha.render === "function" && recaptchaRef.current && recaptchaRef.current.childNodes.length === 0) {
+      window.grecaptcha.render(recaptchaRef.current, {
+        sitekey: recaptchaSiteKey,
+        callback: (token) => setRecaptchaToken(token),
+        "expired-callback": () => setRecaptchaToken(""),
+        "error-callback": () => setRecaptchaToken(""),
+      });
+      return;
+    }
+
+    // If script already exists, wait for grecaptcha to be ready
+    if (window.grecaptcha) {
+      window.grecaptcha.ready(() => {
+        if (recaptchaRef.current && recaptchaRef.current.childNodes.length === 0) {
+          window.grecaptcha.render(recaptchaRef.current, {
+            sitekey: recaptchaSiteKey,
+            callback: (token) => setRecaptchaToken(token),
+            "expired-callback": () => setRecaptchaToken(""),
+            "error-callback": () => setRecaptchaToken(""),
+          });
+        }
+      });
+      return;
+    }
+
+    // Otherwise, load the script
+    const scriptId = "recaptcha-script";
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoadCallback&render=explicit";
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+
+    // Define the callback globally
+    window.onRecaptchaLoadCallback = () => {
+      if (window.grecaptcha && recaptchaRef.current && recaptchaRef.current.childNodes.length === 0) {
+        window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: recaptchaSiteKey,
+          callback: (token) => setRecaptchaToken(token),
+          "expired-callback": () => setRecaptchaToken(""),
+          "error-callback": () => setRecaptchaToken(""),
+        });
+      }
+    };
+  }, [recaptchaRef, recaptchaSiteKey]);
+
   return (
     <>
       {/* Google Map Section */}
@@ -183,6 +257,12 @@ const Footer = () => {
               onChange={e => setMessage(e.target.value)}
               required
             />
+            <div
+              ref={recaptchaRef}
+              className="g-recaptcha"
+              style={{ margin: "12px 0" }}
+              data-sitekey={recaptchaSiteKey}
+            ></div>
             <button type="submit" className="newsletter-submit">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
@@ -342,11 +422,12 @@ const Footer = () => {
               height={120}
               priority
             />
-          </div>
+          </div>  
           
           <div className='footer-links'>
-            <Link href='/hotel-policies' className='footer-link'>Hotel Policies</Link>
-            <Link href='/contact' className='footer-link'>Contact Us</Link>
+            
+
+            <Link href='/blogs' className='footer-link'>Contact Us</Link>
           </div>
 
           <button className='scroll-top' onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>

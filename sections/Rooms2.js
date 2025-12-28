@@ -192,7 +192,7 @@ const Rooms = () => {
                           color: '#666',
                           marginBottom: '8px',
                           paddingLeft: '20px',
-                          position: 'relative'
+                          position: 'relative' 
                         }}>
                           <span style={{
                             position: 'absolute',

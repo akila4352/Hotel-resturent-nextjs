@@ -3,7 +3,7 @@ import { Title } from "./common/Title"
 import { expertise } from "@/assets/data/dummydata"
 import { RoomCard } from "./common/RoomCard"
 
-const Expertise = () => {
+const Expertise = () => { 
   return ( 
     <>
       <section className='expertise'>

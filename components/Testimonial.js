@@ -27,7 +27,7 @@ function SamplePrevArrow(props) {
         <RiArrowLeftSLine size={25} />
       </button>
     </div>
-  )
+  ) 
 }
  
 const Testimonial = () => {

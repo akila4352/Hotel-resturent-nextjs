@@ -65,7 +65,7 @@ const AutoSwapIcons = ({ items }) => {
       setTimeout(() => setIsPaused(false), 5000)
     }, 300)
   }
-
+ 
   return (
     <>
       <style jsx>{`

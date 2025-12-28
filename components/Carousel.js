@@ -1,4 +1,4 @@
-"use client";
+"use client"; 
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
@@ -262,18 +262,15 @@ export default function Carousel({ items = [] }) {
  				.carousel-wrapper { overflow: hidden; }
 				.slide-item { --tx: 0px; --ty: 0px; --ox: 0px; --oy: 0px; height: 100vh; position: relative; overflow: hidden; }
 				.slide-bg { position: absolute; inset: 0; overflow: hidden; box-shadow: inset 0 28px 40px -24px rgba(0,0,0,0.35); }
-				.slide-bg::before {
-					content: "";
-					position: absolute;
-					top: 0;
-					left: 0;
-					right: 0;
-					height: 14%;
-					background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 100%);
-					pointer-events: none;
-					z-index: 3;
+				.slide-bg img { 
+					will-change: transform; 
+					z-index: 1; 
+					width: 100vw !important; 
+					max-width: 100vw !important; 
+					height: 100vh !important; 
+					max-height: 100vh !important; 
+					object-fit: cover; 
 				}
-				.slide-bg img { will-change: transform; z-index: 1; }
 				.shape { position: absolute; border-radius: 50%; opacity: 0.12; filter: blur(6px); pointer-events: none; z-index: 4; }
  				.shape-1 { width: 220px; height: 220px; background: radial-gradient(circle at 30% 30%, #ff7a59, transparent 40%); left: -60px; top: 10%; animation: floatSlow 8s ease-in-out infinite; transform: translateZ(0); }
  				.shape-2 { width: 160px; height: 160px; background: radial-gradient(circle at 60% 60%, #2fb0ff, transparent 40%); right: -50px; bottom: 12%; animation: floatSlow 10s ease-in-out infinite reverse; transform: translateZ(0); }
@@ -371,33 +368,29 @@ export default function Carousel({ items = [] }) {
 				}
 
 				@media (max-width: 900px) {
-					.hero-title {
-						font-size: clamp(32px, 7vw, 60px);
-						line-height: 1.12;
+					.slide-item, .carousel-wrapper, .carousel-inner {
+						height: 60vh !important;
+						min-height: 320px;
+						max-height: 70vw;
 					}
-
-					.hero-sub {
-						font-size: clamp(12px, 2.2vw, 16px);
-						letter-spacing: 6px;
-					}
-
-					.hero-sub::before,
-					.hero-sub::after {
-						width: 50px;
-					}
-					
-					.hero-sub::before { left: -65px; }
-					.hero-sub::after  { right: -65px; }
-
-					.hero-overlay {
-						width: 92%;
-						padding: 0 12px;
+					.slide-bg img {
+						height: 60vh !important;
+						max-height: 70vw;
 					}
 				}
 
 				@media (max-width: 480px) {
+					.slide-item, .carousel-wrapper, .carousel-inner {
+						height: 38vh !important;
+						min-height: 180px;
+						max-height: 50vw;
+					}
+					.slide-bg img {
+						height: 38vh !important;
+						max-height: 50vw;
+					}
 					.hero-title {
-						font-size: clamp(24px, 8vw, 36px);
+						font-size: clamp(18px, 7vw, 28px);
 						line-height: 1.15;
 						text-shadow: 
 							1px 1px 0 rgba(0,0,0,0.2),
@@ -405,26 +398,12 @@ export default function Carousel({ items = [] }) {
 							3px 3px 5px rgba(0,0,0,0.3),
 							0 4px 12px rgba(0,0,0,0.35);
 					}
-
-					.hero-sub {
-						font-size: 12px;
-						letter-spacing: 4px;
-						padding: 0 10px;
-						text-shadow: 
-							1px 1px 0 rgba(0,0,0,0.2),
-							2px 2px 3px rgba(0,0,0,0.25),
-							0 3px 10px rgba(0,0,0,0.3);
+					.hero-overlay {
+						width: 98%;
+						padding: 0 4px;
 					}
-					
-					.hero-sub::before,
-					.hero-sub::after {
-						width: 30px;
-					}
-					
-					.hero-sub::before { left: -45px; }
-					.hero-sub::after  { right: -45px; }
 				}
  			`}</style>
 		</div>
 	);
-} 
+}

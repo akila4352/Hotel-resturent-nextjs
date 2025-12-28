@@ -195,7 +195,7 @@ export const dishdata = [
 export const roomsdata = [
   {
     id: 1,
-    name: "ROOM-1. Family Room",
+    name: "Family Room",
     roomNumber: 1,
     startingPrice: "START FROM $30 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
@@ -220,7 +220,7 @@ export const roomsdata = [
   },
   {
     id: 2,
-    name: "ROOM-2. Antik room",
+    name: "Antik room",
     roomNumber: 2,
     startingPrice: "START FROM $20 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
@@ -244,7 +244,7 @@ export const roomsdata = [
   },
   {
     id: 3,
-    name: "ROOM-3. Relax Deluxe",
+    name: "Relax Deluxe",
     roomNumber: 3,
     startingPrice: "START FROM $20 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
@@ -267,7 +267,7 @@ export const roomsdata = [
   },
   {
     id: 4,
-    name: "ROOM-4. Deluxe room",
+    name: "Deluxe room",
     roomNumber: 4,
     startingPrice: "START FROM $20 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
@@ -289,7 +289,7 @@ export const roomsdata = [
     ]
   },{
     id: 5,
-    name: "ROOM-5. No Air Conditioning With Fan",
+    name: "No Air Conditioning With Fan",
     roomNumber: 5,
     startingPrice: "START FROM $10 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
@@ -312,7 +312,7 @@ export const roomsdata = [
   },
   {
     id: 6,
-    name: "ROOM-6. Non Air conditioning With Fan",
+    name: "Non Air conditioning With Fan",
     roomNumber: 6,
     startingPrice: "START FROM $10 PER DAY",
     description: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters.",
