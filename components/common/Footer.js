@@ -369,8 +369,8 @@ const Footer = () => {
           </div>
           
           <div className='footer-links'>
-            <Link href='/hotel-policies' className='footer-link'>Hotel Policies</Link>
-            <Link href='/contact' className='footer-link'>Contact Us</Link>
+        
+            <Link href='/blogs' className='footer-link'>Contact Us</Link>
           </div>
 
           <button className='scroll-top' onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
