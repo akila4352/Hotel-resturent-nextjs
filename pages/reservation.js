@@ -164,6 +164,7 @@ export default function ReservationPage() {
 
     setSubmitting(true)
     try {
+
       // Calculate room numbers and total price
       const bookedRooms = selectedRooms.length
         ? selectedRooms
@@ -205,6 +206,28 @@ export default function ReservationPage() {
       }
 
       await push(dbRef(rtdb, "reservations"), payload)
+
+      // Send booking confirmation emails to user and admin
+      try {
+        const emailRes = await fetch("/api/send-booking-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userEmail: form.email,
+            userName: form.firstName + (form.lastName ? " " + form.lastName : ""),
+            bookingDetails: payload,
+          }),
+        });
+        const emailJson = await emailRes.json();
+        if (emailRes.ok) {
+          alert("Booking request saved. Email sent successfully!");
+        } else {
+          alert("Booking saved, but failed to send email: " + (emailJson?.error || emailJson?.message || "Unknown error"));
+        }
+      } catch (emailErr) {
+        alert("Booking saved, but failed to send email: " + (emailErr?.message || "Unknown error"));
+        console.error("Failed to send booking emails:", emailErr);
+      }
 
       const buildIcsForReservation = (guest, startDateIso, endDateIso) => {
         const formatDate = (iso) => {
