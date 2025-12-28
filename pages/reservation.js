@@ -5,6 +5,8 @@ import { rtdb } from "../lib/firebase"
 import { ref as dbRef, push } from "firebase/database"
 import { rooms as roomOptions } from "@/sections/Rooms"
 import ProgressBar from "../components/ProgressBar"
+import dynamic from "next/dynamic";
+const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), { ssr: false });
 
 export default function ReservationPage() {
   const router = useRouter()
@@ -133,6 +135,9 @@ export default function ReservationPage() {
 
   const handleBack = () => setStep(1)
 
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -157,6 +162,10 @@ export default function ReservationPage() {
       errors.push(suitability.reason + ". Please add more rooms.");
     }
 
+    if (!recaptchaToken) {
+      errors.push("Please complete the reCAPTCHA.");
+    }
+
     if (errors.length > 0) {
       alert(errors.join("\n")); 
       return;
@@ -164,6 +173,19 @@ export default function ReservationPage() {
 
     setSubmitting(true)
     try {
+      // 1. Verify reCAPTCHA
+      const recaptchaRes = await fetch("/api/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: recaptchaToken, gmail: form.email, message: "Reservation attempt" }),
+      });
+      const recaptchaJson = await recaptchaRes.json();
+      if (!recaptchaJson.success) {
+        setSubmitting(false);
+        alert("reCAPTCHA verification failed. Please try again.");
+        setRecaptchaToken(null);
+        return;
+      }
 
       // Calculate room numbers and total price
       const bookedRooms = selectedRooms.length
@@ -682,6 +704,15 @@ export default function ReservationPage() {
                     <div className="form-field full agree-field">
                       <input name="agree" id="agree" type="checkbox" checked={form.agree} onChange={handleChange} required />
                       <label htmlFor="agree">By clicking here, I state that I have read and understood the terms and conditions.</label>
+                    </div>
+                    {/* Add reCAPTCHA widget */}
+                    <div className="form-field full" style={{ margin: "10px 0" }}>
+                      {siteKey && (
+                        <ReCAPTCHA
+                          sitekey={siteKey}
+                          onChange={token => setRecaptchaToken(token)}
+                        />
+                      )}
                     </div>
                   </div>
 
