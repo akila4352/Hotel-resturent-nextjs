@@ -31,7 +31,7 @@ export default function BookingBox({
     room2: "https://ical.booking.com/v1/export?t=b6905504-0332-405d-bbda-9c90a024503b",
     room5: "https://ical.booking.com/v1/export?t=0daa19a6-a97f-4ede-9fec-e1787aca9672",
     room1: "https://ical.booking.com/v1/export?t=a75aef94-6f98-443a-8b24-f179be163fe5",
-    room4: "/calendars/room4.ics",
+    room4: "https://ical.booking.com/v1/export?t=e81c12e2-a788-4035-bad5-ece10f4f07b8",
     room6: "https://ical.booking.com/v1/export?t=dd62bdaf-ffa4-4a91-ae04-7eaed4ec79d5",
   }
 
