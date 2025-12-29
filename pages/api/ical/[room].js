@@ -40,29 +40,23 @@ export default async function handler(req, res) {
     "non-air-conditioning-with-fan": 6,
   }
   const roomNumber = roomMap[String(room).toLowerCase()]
-  if (!roomNumber) {
-    res.status(404).send("Room not found")
-    return
-  }
-
-  // Fetch reservations from your database for this room
-  // Example: using Firebase RTDB (adjust as needed)
   let reservations = []
-  try {
-    const db = getDatabase()
-    const snap = await get(ref(db, "reservations"))
-    if (snap.exists()) {
-      reservations = Object.values(snap.val() || {}).filter(
-        (r) =>
-          Array.isArray(r.selectedRooms) &&
-          r.selectedRooms.some((sr) => String(sr.id) === String(roomNumber))
-      )
+  if (roomNumber) {
+    try {
+      const db = getDatabase()
+      const snap = await get(ref(db, "reservations"))
+      if (snap.exists()) {
+        reservations = Object.values(snap.val() || {}).filter(
+          (r) =>
+            Array.isArray(r.selectedRooms) &&
+            r.selectedRooms.some((sr) => String(sr.id) === String(roomNumber))
+        )
+      }
+    } catch (e) {
+      reservations = []
     }
-  } catch (e) {
-    // fallback: no reservations
-    reservations = []
   }
-
+  // Always return a valid iCal file, even if no reservations or room not found
   const ical = reservationsToICal(reservations, room)
   res.setHeader("Content-Type", "text/calendar")
   res.status(200).send(ical)
