@@ -17,6 +17,7 @@ import { rtdb } from "@/lib/firebase"
 import { ref as dbRef, push } from "firebase/database"
 import BookingBox from "@/components/BookingBox"
 import AboutUs from "@/components/AboutUs"
+import Link from 'next/link'
 
 // Auto-Swapping Icons Component
 const AutoSwapIcons = ({ items }) => {
@@ -212,10 +213,19 @@ const AutoSwapIcons = ({ items }) => {
 
         <div className="icons-wrapper">
           {getVisibleItems().map((item, i) => (
-            <div className="icon-box" key={`${currentIndex}-${i}`}>
-              <span className="icon">{item.icon}</span>
-              <h3>{item.title}</h3>
-            </div>
+            item.link ? (
+              <Link href={item.link} passHref legacyBehavior key={`${currentIndex}-${i}`}>
+                <a className="icon-box">
+                  <span className="icon">{item.icon}</span>
+                  <h3>{item.title}</h3>
+                </a>
+              </Link>
+            ) : (
+              <div className="icon-box" key={`${currentIndex}-${i}`}>
+                <span className="icon">{item.icon}</span>
+                <h3>{item.title}</h3>
+              </div>
+            )
           ))}
         </div>
 

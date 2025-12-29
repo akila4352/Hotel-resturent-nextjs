@@ -15,6 +15,7 @@ export const home = [
   {
     icon: <FaConciergeBell size={25} />, // Restaurant
     title: "Restaurant",
+      link: "/restaurant2",
   },
   {
     icon: <FaBus size={25} />, // Transport
@@ -27,10 +28,12 @@ export const home = [
   {
     icon: <FaMapMarkedAlt size={25} />, // Nearby Activity
     title: "Nearby Activity",
+      link: "/showcase",
   },
   {
     icon: <FaBed size={25} />, // Rooms
     title: "Rooms",
+      link: "/rooms2",
   },
 ];
 
