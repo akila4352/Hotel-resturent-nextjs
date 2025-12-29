@@ -223,13 +223,13 @@ const Footer = () => {
             <Link href='https://twitter.com' target='_blank' className="social-link">
               <FaXTwitter size={20} />
             </Link>
-            <Link href='https://facebook.com' target='_blank' className="social-link">
+            <Link href='https://www.facebook.com/share/1Gf3tdKZSi/?mibextid=wwXIfr' target='_blank' className="social-link">
               <BsFacebook size={20} />
             </Link>
             <Link href='https://tripadvisor.com' target='_blank' className="social-link">
               <FaTripadvisor size={20} />
             </Link>
-            <Link href='https://instagram.com' target='_blank' className="social-link">
+            <Link href='https://www.instagram.com/hotel_amore392?igsh=MTJ2c3R5YmozYmY1eA%3D%3D&utm_source=qr' target='_blank' className="social-link">
               <AiFillInstagram size={20} />
             </Link>
           </div>
