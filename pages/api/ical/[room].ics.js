@@ -6,85 +6,52 @@ function formatDate(dateStr) {
   return d.toISOString().slice(0, 10).replace(/-/g, "")
 }
 
-function nowUTC() {
-  return new Date()
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .split(".")[0] + "Z"
-}
-
 function buildICal(reservations, roomType) {
   let events = ""
-  let hasEvent = false
-
-  Object.entries(reservations).forEach(([id, booking], index) => {
+  Object.entries(reservations).forEach(([id, booking]) => {
     if (!booking.selectedRooms || !Array.isArray(booking.selectedRooms)) return
-
     const typeNumber = roomType.replace("room", "")
     const hasRoom = booking.selectedRooms.some(
       room => String(room.id) === typeNumber || String(room.id) === roomType
     )
     if (!hasRoom) return
     if (!booking.checkIn || !booking.checkOut) return
-
     const dtstart = formatDate(booking.checkIn)
-
-    // DTEND must be checkout + 1 day
-    const checkoutPlusOne = new Date(booking.checkOut)
-    checkoutPlusOne.setDate(checkoutPlusOne.getDate() + 1)
-    const dtend = formatDate(checkoutPlusOne)
-
-    hasEvent = true
-
+    // Booking.com expects DTEND to be the day after checkout
+    const dtend = formatDate(
+      new Date(new Date(booking.checkOut).getTime() + 24 * 60 * 60 * 1000)
+    )
     events +=
-`BEGIN:VEVENT\r
-UID:${roomType}-${id}@amorebeach.com\r
-DTSTAMP:${nowUTC()}\r
-DTSTART;VALUE=DATE:${dtstart}\r
-DTEND;VALUE=DATE:${dtend}\r
-SUMMARY:Booked via AmoreBeach.com\r
-STATUS:CONFIRMED\r
-END:VEVENT\r
-`
+`BEGIN:VEVENT
+UID:${id}@amorebeach.com
+SUMMARY:Reservation
+DTSTART;VALUE=DATE:${dtstart}
+DTEND;VALUE=DATE:${dtend}
+STATUS:CONFIRMED
+END:VEVENT`
   })
-
-  // Booking.com REQUIRES at least ONE event
-  if (!hasEvent) {
-    events =
-`BEGIN:VEVENT\r
-UID:${roomType}-placeholder@amorebeach.com\r
-DTSTAMP:${nowUTC()}\r
-DTSTART;VALUE=DATE:20990101\r
-DTEND;VALUE=DATE:20990102\r
-SUMMARY:Availability placeholder\r
-STATUS:TENTATIVE\r
-END:VEVENT\r
-`
-  }
-
   return (
-`BEGIN:VCALENDAR\r
-VERSION:2.0\r
-PRODID:-//Amore Beach//Booking Export//EN\r
-CALSCALE:GREGORIAN\r
-METHOD:PUBLISH\r
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//amorebeach.com//Booking Export//EN
 ${events}
-END:VCALENDAR\r
-`
+END:VCALENDAR`
   )
 }
 
 export default async function handler(req, res) {
-  const { room = "room1" } = req.query
-
-  const snapshot = await get(dbRef(rtdb, "reservations"))
-  const reservations = snapshot.val() || {}
-
-  const ical = buildICal(reservations, room)
-
+  const { room } = req.query
+  const roomType = room || "room1"
+  let reservations = {}
+  try {
+    const snapshot = await get(dbRef(rtdb, "reservations"))
+    reservations = snapshot.val() || {}
+  } catch (err) {
+    // If Firebase fails, still return a valid empty calendar
+    reservations = {}
+  }
+  const ical = buildICal(reservations, roomType)
   res.setHeader("Content-Type", "text/calendar; charset=utf-8")
-  res.setHeader("Cache-Control", "no-store")
-  res.setHeader("Content-Disposition", `inline; filename="${room}.ics"`)
-
+  res.setHeader("Content-Disposition", `attachment; filename="${roomType}.ics"`)
   res.status(200).send(ical)
 }
