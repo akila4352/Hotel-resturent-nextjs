@@ -1,25 +1,4 @@
-// Overlay for payment block
-.payment-block-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0,0,0,0.98);
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.payment-block-message {
-  color: #fff;
-  text-align: center;
-  background: rgba(0,0,0,0.7);
-  padding: 2rem 3rem;
-  border-radius: 12px;
-  box-shadow: 0 0 24px 0 #000;
-}
-//payment block end 
+
 /*  Hero Section */
 .hero {
   text-align: center;
