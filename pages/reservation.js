@@ -285,84 +285,8 @@ export default function ReservationPage() {
         setEmailError("Reservation saved, but failed to send confirmation email.");
       }
 
-      const buildIcsForReservation = (guest, startDateIso, endDateIso) => {
-        const formatDate = (iso) => {
-          const dt = new Date(iso)
-          const y = dt.getUTCFullYear().toString().padStart(4, "0")
-          const m = (dt.getUTCMonth() + 1).toString().padStart(2, "0")
-          const d = dt.getUTCDate().toString().padStart(2, "0")
-          return `${y}${m}${d}`
-        }
-        const dtstamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
-        const uid = `res-${Date.now()}@${typeof window !== "undefined" ? window.location.hostname : "example.com"}`
-        const dtstart = formatDate(startDateIso)
-        const dtend = formatDate(endDateIso)
- 
-        const summary = `Reservation: ${guest.firstName || ""} ${guest.lastName || ""}`.trim()
-        const description = [
-          `Guests: adults=${payload.adults}, children=${payload.children}, rooms=${payload.rooms}`,
-          `Nights: ${payload.nights}`,
-          `Email: ${guest.email || ""}`,
-          `Phone: ${guest.mobile || ""}`,
-        ].filter(Boolean).join("\\n")
-
-        return [
-          "BEGIN:VCALENDAR",
-          "VERSION:2.0",
-          "PRODID:-//YourSite//ReservationSync//EN",
-          "CALSCALE:GREGORIAN",
-          "BEGIN:VEVENT",
-          `UID:${uid}`,
-          `DTSTAMP:${dtstamp}`,
-          `DTSTART;VALUE=DATE:${dtstart}`,
-          `DTEND;VALUE=DATE:${dtend}`,
-          `SUMMARY:${summary}`,
-          `DESCRIPTION:${description}`,
-          `STATUS:CONFIRMED`,
-          "END:VEVENT",
-          "END:VCALENDAR",
-        ].join("\r\n")
-      }
-
-      const tryPushIcs = async (ics) => {
-        try {
-          const iCalUrl = process.env.NEXT_PUBLIC_TRIPLE_ICAL
-          if (!iCalUrl) return { ok: false, message: "No remote calendar configured." }
-
-          try {
-            const parsed = new URL(iCalUrl)
-            const host = (parsed.hostname || "").toLowerCase()
-            const path = (parsed.pathname || "").toLowerCase()
-            if (host.includes("booking.com") || path.includes("/v1/export")) {
-              return {
-                ok: false,
-                message: "Configured calendar appears to be a Booking.com export (read-only).",
-              }
-            }
-          } catch (e) {
-            console.warn("tryPushIcs: failed to parse iCalUrl", e)
-          }
-
-          const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
-          const res = await fetch(proxyUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ics, method: "PUT" }),
-          })
-          const json = await res.json().catch(() => ({ ok: false, message: `HTTP ${res.status}` }))
-          if (!res.ok || !json.ok) return { ok: false, message: json?.message || `Remote responded ${res.status}` }
-          return { ok: true, message: json.message || "Pushed" }
-        } catch (err) {
-          return { ok: false, message: err?.message || "Unknown error" }
-        }
-      }
-
-      const ics = buildIcsForReservation(payload.guest || {}, payload.checkIn, payload.checkOut)
-      const pushResult = await tryPushIcs(ics)
-
-      console.log("Calendar push result:", pushResult)
       alert("Booking request saved.")
- 
+
       setSaved(true)
       setSubmitting(false)
       setTimeout(() => {
