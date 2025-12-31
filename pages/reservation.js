@@ -286,18 +286,20 @@ export default function ReservationPage() {
         setEmailError("Reservation saved, but failed to send confirmation email.");
       }
 
-      // Wait for iCal endpoint to be pinged after email is sent
+      // --- Wait for iCal endpoint to be pinged before redirecting ---
       try {
-        const icalRes = await fetch(`/api/ical/room${payload.roomNumbers[0]}.ics`)
-        console.log("iCal endpoint pinged for room", payload.roomNumbers[0], "status:", icalRes.status)
+        // This will block until the request completes
+        const icalRes = await fetch(`/api/ical/room${payload.roomNumbers[0]}.ics?ping=${Date.now()}`);
+        console.log("iCal endpoint pinged for room", payload.roomNumbers[0], "status:", icalRes.status);
       } catch (e) {
-        console.warn("iCal ping failed", e)
+        console.warn("iCal ping failed", e);
       }
 
-      alert("Booking request saved.")
+      alert("Booking request saved.");
 
       setSaved(true)
       setSubmitting(false)
+      // Only redirect after all async work is done
       setTimeout(() => {
         router.push("/").catch(() => {})
       }, 1200)
