@@ -270,13 +270,6 @@ export default function ReservationPage() {
 
       await push(dbRef(rtdb, "reservations"), payload)
       console.log("Reservation saved to Firebase:", payload)
-      // Wait for iCal endpoint to be pinged before redirecting (for debugging)
-      try {
-        const icalRes = await fetch(`/api/ical/room${payload.roomNumbers[0]}.ics`)
-        console.log("iCal endpoint pinged for room", payload.roomNumbers[0], "status:", icalRes.status)
-      } catch (e) {
-        console.warn("iCal ping failed", e)
-      }
 
       // --- Send confirmation email to guest ---
       try {
@@ -291,6 +284,14 @@ export default function ReservationPage() {
         });
       } catch (err) {
         setEmailError("Reservation saved, but failed to send confirmation email.");
+      }
+
+      // Wait for iCal endpoint to be pinged after email is sent
+      try {
+        const icalRes = await fetch(`/api/ical/room${payload.roomNumbers[0]}.ics`)
+        console.log("iCal endpoint pinged for room", payload.roomNumbers[0], "status:", icalRes.status)
+      } catch (e) {
+        console.warn("iCal ping failed", e)
       }
 
       alert("Booking request saved.")
