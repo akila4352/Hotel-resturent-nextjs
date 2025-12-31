@@ -270,8 +270,13 @@ export default function ReservationPage() {
 
       await push(dbRef(rtdb, "reservations"), payload)
       console.log("Reservation saved to Firebase:", payload)
-      // Optionally, ping iCal endpoint to warm up cache (if any)
-      fetch(`/api/ical/room${payload.roomNumbers[0]}.ics`).catch(() => {})
+      // Wait for iCal endpoint to be pinged before redirecting
+      try {
+        await fetch(`/api/ical/room${payload.roomNumbers[0]}.ics`)
+        console.log("iCal endpoint pinged for room", payload.roomNumbers[0])
+      } catch (e) {
+        console.warn("iCal ping failed", e)
+      }
 
       // --- Send confirmation email to guest ---
       try {
