@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState, useRef } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/router"
 import { parseISO, format, differenceInDays } from "date-fns"
 import { rtdb } from "../lib/firebase"
 import { ref as dbRef, push } from "firebase/database"
 import { rooms as roomOptions } from "@/sections/Rooms"
 import ProgressBar from "../components/ProgressBar"
+import dynamic from "next/dynamic"
+const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), { ssr: false })
 
 export default function ReservationPage() {
   const router = useRouter()
@@ -133,48 +135,9 @@ export default function ReservationPage() {
 
   const handleBack = () => setStep(1)
 
-  // --- reCAPTCHA state ---
-  const [recaptchaToken, setRecaptchaToken] = useState("");
-  const [recaptchaError, setRecaptchaError] = useState("");
-  const recaptchaRef = useRef(null);
-
-  // --- Gmail send error state ---
-  const [emailError, setEmailError] = useState("");
-
-  // --- reCAPTCHA site key ---
-  const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
-
-  // --- Load reCAPTCHA script on mount ---
-  useEffect(() => {
-    if (!RECAPTCHA_SITE_KEY) return;
-    if (window.grecaptcha) return;
-    const script = document.createElement("script");
-    script.src = `https://www.google.com/recaptcha/api.js?render=explicit`;
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, [RECAPTCHA_SITE_KEY]);
-
-  // --- Render reCAPTCHA widget when step 2 is shown ---
-  useEffect(() => {
-    if (step !== 2 || !RECAPTCHA_SITE_KEY) return;
-    setTimeout(() => {
-      if (window.grecaptcha && recaptchaRef.current && !recaptchaRef.current.hasChildNodes()) {
-        window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: RECAPTCHA_SITE_KEY,
-          callback: (token) => {
-            setRecaptchaToken(token);
-            setRecaptchaError("");
-          },
-          "expired-callback": () => setRecaptchaToken(""),
-          "error-callback": () => setRecaptchaError("reCAPTCHA failed. Please try again."),
-        });
-      }
-    }, 300);
-  }, [step, RECAPTCHA_SITE_KEY]);
+  const [recaptchaToken, setRecaptchaToken] = useState(null)
+  const [emailError, setEmailError] = useState("")
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -206,46 +169,40 @@ export default function ReservationPage() {
       return;
     }
 
-    // --- Verify reCAPTCHA token with backend ---
-    setRecaptchaError("");
+    setSubmitting(true)
     try {
+      // 1. Verify reCAPTCHA
       const recaptchaRes = await fetch("/api/verify-recaptcha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: recaptchaToken }),
-      });
-      const recaptchaJson = await recaptchaRes.json();
+      })
+      const recaptchaJson = await recaptchaRes.json()
       if (!recaptchaJson.success) {
-        setRecaptchaError("reCAPTCHA verification failed. Please try again.");
-        setRecaptchaToken("");
-        if (window.grecaptcha && recaptchaRef.current) {
-          window.grecaptcha.reset();
-        }
-        return;
+        setSubmitting(false)
+        alert("reCAPTCHA verification failed. Please try again.")
+        setRecaptchaToken(null)
+        return
       }
-    } catch (err) {
-      setRecaptchaError("reCAPTCHA verification failed. Please try again.");
-      setRecaptchaToken("");
-      if (window.grecaptcha && recaptchaRef.current) {
-        window.grecaptcha.reset();
-      }
-      return;
-    }
 
-    setSubmitting(true)
-    try {
       // Calculate room numbers and total price
       const bookedRooms = selectedRooms.length
         ? selectedRooms
         : selectedRoom
         ? [{ room: selectedRoom, qty: 1 }]
-        : [];
-      const roomNumbers = bookedRooms.map((sr) => sr.room.id);
-      const totalPriceValue = (bookedRooms.reduce((sum, sr) => sum + ((sr.room.price || 0) * sr.qty), 0) + (breakfastType ? totalGuests * breakfastPrices[breakfastType] : 0)) * nights;
+        : []
+      const roomNumbers = bookedRooms.map((sr) => sr.room.id)
+      const totalPriceValue = (bookedRooms.reduce((sum, sr) => sum + ((sr.room.price || 0) * sr.qty), 0) + (breakfastType ? totalGuests * breakfastPrices[breakfastType] : 0)) * nights
 
+      // Always use YYYY-MM-DD and if check-in and check-out are the same, set check-out to next day
+      let checkInDate = ci ? new Date(ci) : checkIn ? new Date(checkIn) : null
+      let checkOutDate = co ? new Date(co) : checkOut ? new Date(checkOut) : null
+      if (checkInDate && checkOutDate && checkInDate.toDateString() === checkOutDate.toDateString()) {
+        checkOutDate.setDate(checkOutDate.getDate() + 1)
+      }
       const payload = {
-        checkIn: ci ? ci.toISOString().slice(0, 10) : checkIn || "",
-        checkOut: co ? co.toISOString().slice(0, 10) : checkOut || "",
+        checkIn: checkInDate ? checkInDate.toISOString().slice(0, 10) : "",
+        checkOut: checkOutDate ? checkOutDate.toISOString().slice(0, 10) : "",
         nights,
         adults: Number(adults || 0),
         children: Number(children || 0),
@@ -264,42 +221,44 @@ export default function ReservationPage() {
         },
         createdAt: new Date().toISOString(),
         timestamp: Date.now(),
-        roomNumbers, // array of room numbers
-        totalPrice: totalPriceValue, // total price for the booking
+        roomNumbers,
+        totalPrice: totalPriceValue,
       }
 
       await push(dbRef(rtdb, "reservations"), payload)
-      console.log("Reservation saved to Firebase:", payload)
 
-      // --- Send confirmation email to guest ---
+      // Send booking confirmation emails to user and admin
       try {
-        await fetch("/api/send-booking-email", {
+        const emailRes = await fetch("/api/send-booking-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userEmail: payload.guest.email,
-            userName: `${payload.guest.firstName} ${payload.guest.lastName}`.trim(),
+            userEmail: form.email,
+            userName: form.firstName + (form.lastName ? " " + form.lastName : ""),
             bookingDetails: payload,
           }),
-        });
-      } catch (err) {
-        setEmailError("Reservation saved, but failed to send confirmation email.");
+        })
+        const emailJson = await emailRes.json()
+        if (!emailRes.ok) {
+          setEmailError("Booking saved, but failed to send email: " + (emailJson?.error || emailJson?.message || "Unknown error"))
+        }
+      } catch (emailErr) {
+        setEmailError("Booking saved, but failed to send email: " + (emailErr?.message || "Unknown error"))
       }
 
       // --- Wait for iCal endpoint to be pinged before redirecting ---
       try {
-        // This will block until the request completes
-        const icalRes = await fetch(`/api/ical/room${payload.roomNumbers[0]}.ics?ping=${Date.now()}`);
-        console.log("iCal endpoint pinged for room", payload.roomNumbers[0], "status:", icalRes.status);
+        if (payload.roomNumbers && payload.roomNumbers.length > 0) {
+          const icalRes = await fetch(`/api/ical/room${payload.roomNumbers[0]}.ics?ping=${Date.now()}`)
+          // Optionally log or check status
+        }
       } catch (e) {
-        console.warn("iCal ping failed", e);
+        // Optionally log
       }
 
-      alert("Booking request saved.");
-
+      alert("Booking request saved.")
       setSaved(true)
       setSubmitting(false)
-      // Only redirect after all async work is done
       setTimeout(() => {
         router.push("/").catch(() => {})
       }, 1200)
@@ -775,11 +734,13 @@ export default function ReservationPage() {
                       <label htmlFor="agree">By clicking here, I state that I have read and understood the terms and conditions.</label>
                     </div>
 
-                    <div className="form-field full">
-                      {/* reCAPTCHA widget */}
-                      <div ref={recaptchaRef} style={{ minHeight: 78, marginBottom: 8 }} />
-                      {recaptchaError && (
-                        <div style={{ color: "#dc2626", fontSize: 13, marginTop: 4 }}>{recaptchaError}</div>
+                    {/* Add reCAPTCHA widget */}
+                    <div className="form-field full" style={{ margin: "10px 0" }}>
+                      {siteKey && (
+                        <ReCAPTCHA
+                          sitekey={siteKey}
+                          onChange={token => setRecaptchaToken(token)}
+                        />
                       )}
                     </div>
                   </div>
