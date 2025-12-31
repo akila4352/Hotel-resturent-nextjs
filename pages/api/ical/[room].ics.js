@@ -50,6 +50,7 @@ export default async function handler(req, res) {
   try {
     const snapshot = await get(dbRef(rtdb, "reservations"))
     reservations = snapshot.val() || {}
+    console.log("Reservations loaded for iCal:", reservations)
   } catch (err) {
     reservations = {}
   }
