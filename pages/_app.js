@@ -7,6 +7,7 @@ import "@/styles/main.scss";
 import "../pages/admin/Table.css";
 import "../pages/admin/cards.css";
 import "../pages/admin/users.css";
+import '../styles/reservation.css'
 
 export default function App({ Component, pageProps }) {
   return (

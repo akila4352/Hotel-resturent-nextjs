@@ -1,9 +1,15 @@
 import { rtdb } from "@/lib/firebase"
 import { ref as dbRef, get } from "firebase/database"
- 
+
 function formatDate(dateStr) {
   const d = new Date(dateStr)
   return d.toISOString().slice(0, 10).replace(/-/g, "")
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() + days)
+  return d
 }
 
 function buildICal(reservations, roomType) {
@@ -18,24 +24,22 @@ function buildICal(reservations, roomType) {
     if (!booking.checkIn || !booking.checkOut) return
     const dtstart = formatDate(booking.checkIn)
     // Booking.com expects DTEND to be the day after checkout
-    const dtend = formatDate(
-      new Date(new Date(booking.checkOut).getTime() + 24 * 60 * 60 * 1000)
-    )
+    const dtend = formatDate(addDays(booking.checkOut, 1))
     events +=
 `BEGIN:VEVENT
-UID:${id}@amorebeach.com
+UID:${id}-${roomType}@amorebeach.com
 SUMMARY:Reservation
 DTSTART;VALUE=DATE:${dtstart}
 DTEND;VALUE=DATE:${dtend}
 STATUS:CONFIRMED
-END:VEVENT`
+END:VEVENT
+`
   })
   return (
 `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//amorebeach.com//Booking Export//EN
-${events}
-END:VCALENDAR`
+${events}END:VCALENDAR`
   )
 }
 
@@ -47,7 +51,6 @@ export default async function handler(req, res) {
     const snapshot = await get(dbRef(rtdb, "reservations"))
     reservations = snapshot.val() || {}
   } catch (err) {
-    // If Firebase fails, still return a valid empty calendar
     reservations = {}
   }
   const ical = buildICal(reservations, roomType)

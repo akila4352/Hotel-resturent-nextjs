@@ -7,6 +7,12 @@ function formatDate(dateStr) {
   return d.toISOString().slice(0, 10).replace(/-/g, "")
 }
 
+function addDays(dateStr, days) {
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() + days)
+  return d
+}
+
 function buildICal(reservations, roomType) {
   let events = ""
   Object.entries(reservations).forEach(([id, booking]) => {
@@ -19,10 +25,10 @@ function buildICal(reservations, roomType) {
     if (!booking.checkIn || !booking.checkOut) return
     const dtstart = formatDate(booking.checkIn)
     // Booking.com expects DTEND to be the day after checkout
-    const dtend = formatDate(new Date(new Date(booking.checkOut).getTime() + 24*60*60*1000))
+    const dtend = formatDate(addDays(booking.checkOut, 1))
     events += `
 BEGIN:VEVENT
-UID:${id}@yourdomain.com
+UID:${id}-${roomType}@yourdomain.com
 SUMMARY:Reservation
 DTSTART;VALUE=DATE:${dtstart}
 DTEND;VALUE=DATE:${dtend}

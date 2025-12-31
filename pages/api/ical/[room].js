@@ -10,7 +10,13 @@ function reservationsToICal(reservations, roomName) {
   ]
   reservations.forEach((res, idx) => {
     const dtstart = res.checkIn?.replace(/-/g, "") // YYYYMMDD
-    const dtend = res.checkOut?.replace(/-/g, "")
+    // DTEND should be the day after checkout
+    let dtend = res.checkOut
+    if (dtend) {
+      const d = new Date(dtend)
+      d.setDate(d.getDate() + 1)
+      dtend = d.toISOString().slice(0, 10).replace(/-/g, "")
+    }
     if (!dtstart || !dtend) return
     lines.push(
       "BEGIN:VEVENT",
