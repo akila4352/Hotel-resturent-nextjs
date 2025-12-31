@@ -14,11 +14,15 @@ function addDays(dateStr, days) {
 
 function buildICal(reservations, roomType) {
   let events = ""
+  const typeNumber = roomType.replace("room", "")
   Object.entries(reservations).forEach(([id, booking]) => {
     if (!booking.selectedRooms || !Array.isArray(booking.selectedRooms)) return
-    const typeNumber = roomType.replace("room", "")
+    // Match by room id (number or string)
     const hasRoom = booking.selectedRooms.some(
-      room => String(room.id) === typeNumber || String(room.id) === roomType
+      room =>
+        String(room.id) === typeNumber ||
+        String(room.id) === roomType ||
+        String(room.id) === String(roomType.replace("room", ""))
     )
     if (!hasRoom) return
     if (!booking.checkIn || !booking.checkOut) return
@@ -50,9 +54,11 @@ export default async function handler(req, res) {
   try {
     const snapshot = await get(dbRef(rtdb, "reservations"))
     reservations = snapshot.val() || {}
-    console.log("Reservations loaded for iCal:", reservations)
+    // Debug: log how many reservations and the roomType
+    console.log(`[iCal] Loaded ${Object.keys(reservations).length} reservations for roomType: ${roomType}`)
   } catch (err) {
     reservations = {}
+    console.error("[iCal] Error loading reservations:", err)
   }
   const ical = buildICal(reservations, roomType)
   res.setHeader("Content-Type", "text/calendar; charset=utf-8")
