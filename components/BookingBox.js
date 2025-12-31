@@ -27,12 +27,12 @@ export default function BookingBox({
 
   // mapping roomType -> iCal URL
   const iCalMap = {
-    room3: "https://ical.booking.com/v1/export?t=a57a26bf-b5c1-4bbd-b27d-cdd2e82b5f4c",
-    room2: "https://ical.booking.com/v1/export?t=b303871d-96d1-48ed-b064-d51062f67388",
-    room5: "https://ical.booking.com/v1/export?t=628ddde9-58d3-42b0-89bb-ce820b7f76d6",
-    room1: "https://ical.booking.com/v1/export?t=59b189d8-9355-494b-ae71-12511dea8af4",
-    room4: "https://ical.booking.com/v1/export?t=cb7f1c05-3c2c-4cce-a78b-44dcc5bf48b0",
-    room6: "https://ical.booking.com/v1/export?t=7078b070-a533-4c47-a9c0-a8f18dd13655",
+    room3: "https://ical.booking.com/v1/export?t=73ce2feb-f14e-4dcf-9b5a-fc1a8ab77e93",
+    room2: "https://ical.booking.com/v1/export?t=81738c6a-5b4b-4bd5-88ae-4db019416af1",
+    room5: "https://ical.booking.com/v1/export?t=5ebac038-e813-4086-88ed-a4bec6ad89c6",
+    room1: "https://ical.booking.com/v1/export?t=b181e944-f97c-4ae6-a55c-a21b22503943",
+    room4: "https://ical.booking.com/v1/export?t=1a3b1864-b158-4d8f-966a-5b29a29fecd3",
+    room6: "https://ical.booking.com/v1/export?t=6267f28f-da20-436e-8d42-7f6d1fce4623",
   }
 
   // blocked dates from iCal (Booking.com) 
