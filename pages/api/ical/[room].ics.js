@@ -29,20 +29,24 @@ function buildICal(reservations, roomType) {
     const dtstart = formatDate(booking.checkIn)
     // Booking.com expects DTEND to be the day after checkout
     const dtend = formatDate(addDays(booking.checkOut, 1))
+    const dtstamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
     events +=
 `BEGIN:VEVENT
 UID:${id}-${roomType}@amorebeach.com
-SUMMARY:Reservation
+DTSTAMP:${dtstamp}
 DTSTART;VALUE=DATE:${dtstart}
 DTEND;VALUE=DATE:${dtend}
-STATUS:CONFIRMED
+SUMMARY:Booked
+DESCRIPTION:Room reservation
 END:VEVENT
 `
   })
   return (
 `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//amorebeach.com//Booking Export//EN
+PRODID:-//YourCompany//YourApp//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
 ${events}END:VCALENDAR`
   )
 }

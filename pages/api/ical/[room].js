@@ -5,8 +5,9 @@ function reservationsToICal(reservations, roomName) {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//YourHotel//iCal Export//EN",
+    "PRODID:-//YourCompany//YourApp//EN",
     "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
   ]
   reservations.forEach((res, idx) => {
     const dtstart = res.checkIn?.replace(/-/g, "") // YYYYMMDD
@@ -18,15 +19,15 @@ function reservationsToICal(reservations, roomName) {
       dtend = d.toISOString().slice(0, 10).replace(/-/g, "")
     }
     if (!dtstart || !dtend) return
+    const dtstamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
     lines.push(
       "BEGIN:VEVENT",
-      `UID:${roomName}-${idx}@yourhotel.com`,
-      `DTSTAMP:${new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15)}Z`,
+      `UID:${roomName}-${idx}@amorebeach.com`,
+      `DTSTAMP:${dtstamp}`,
       `DTSTART;VALUE=DATE:${dtstart}`,
       `DTEND;VALUE=DATE:${dtend}`,
-      `SUMMARY:Reservation for ${roomName}`,
-      `DESCRIPTION:Guests: ${res.adults || ""} adults, ${res.children || ""} children`,
-      "STATUS:CONFIRMED",
+      `SUMMARY:Booked`,
+      `DESCRIPTION:Room reservation`,
       "END:VEVENT"
     )
   })
