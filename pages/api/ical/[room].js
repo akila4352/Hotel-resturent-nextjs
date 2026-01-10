@@ -51,11 +51,13 @@ METHOD:PUBLISH
 ${event}
 END:VCALENDAR`
 
-  res.setHeader("Content-Type", "text/calendar; charset=utf-8")
-  res.setHeader(
-    "Content-Disposition",
-    `inline; filename="${roomId}.ics"`
-  )
+  // Show as plain text in browser
+  res.setHeader("Content-Type", "text/plain; charset=utf-8")
+  // Optionally comment out or remove Content-Disposition
+  // res.setHeader(
+  //   "Content-Disposition",
+  //   `inline; filename="${roomId}.ics"`
+  // )
 
   res.status(200).send(ics)
 }
