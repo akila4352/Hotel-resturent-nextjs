@@ -1,3 +1,4 @@
+// Home page renders Hero section and SocialIcons2.
 import { Hero } from "@/sections"
 import Head from "next/head"
 import SocialIcons2 from '../components/common/SocialIcons';

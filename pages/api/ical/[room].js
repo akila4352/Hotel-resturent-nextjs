@@ -1,3 +1,4 @@
+// This API endpoint generates an ICS calendar event for a room booking.
 function toICSDate(dateStr) {
   const d = new Date(dateStr)
   return d.toISOString().slice(0, 10).replace(/-/g, "")
@@ -10,7 +11,17 @@ function addDays(dateStr, days) {
 }
 
 export default function handler(req, res) {
-  const { roomId, checkIn, checkOut } = req.query
+  // Parse roomId from dynamic route param (strip .ics if present)
+  let { room: roomParam, checkIn, checkOut } = req.query
+  let roomId = roomParam
+  if (roomId && roomId.endsWith(".ics")) {
+    roomId = roomId.replace(/\.ics$/, "")
+  }
+
+  // If only ping param is present (no checkIn/checkOut), just respond 200 OK
+  if (!checkIn || !checkOut) {
+    return res.status(200).send("OK")
+  }
 
   // 🔴 Validate input
   if (!roomId || !checkIn || !checkOut) {
