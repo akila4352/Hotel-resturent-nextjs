@@ -43,13 +43,16 @@ SUMMARY:Booked
 END:VEVENT
 `
 
+  // Add blank lines as in your example
   const ics = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Amore Beach//Booking Calendar//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
+
 ${event}
-END:VCALENDAR`
+END:VCALENDAR
+`
 
   // Show as plain text in browser
   res.setHeader("Content-Type", "text/plain; charset=utf-8")
