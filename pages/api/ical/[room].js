@@ -1,30 +1,20 @@
 import { rtdb } from "@/lib/firebase"
 import { ref as dbRef, get } from "firebase/database"
 
-/**
- * Format date to YYYYMMDD (iCal DATE)
- */
 function toICSDate(dateStr) {
-  const d = new Date(dateStr)
-  return d.toISOString().slice(0, 10).replace(/-/g, "")
+  return new Date(dateStr).toISOString().slice(0, 10).replace(/-/g, "")
 }
 
-/**
- * Add days to date
- */
 function addDays(dateStr, days) {
   const d = new Date(dateStr)
   d.setDate(d.getDate() + days)
   return d
 }
 
-/**
- * Build iCal string
- */
 function buildICal(reservations, roomKey) {
   let events = ""
-  const roomNumber = roomKey.replace("room", "") // room1 -> 1
-  const nowStamp =
+  const roomNumber = roomKey.replace("room", "")
+  const now =
     new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
 
   Object.entries(reservations || {}).forEach(([id, booking]) => {
@@ -36,17 +26,12 @@ function buildICal(reservations, roomKey) {
     )
     if (!match) return
 
-    const dtStart = toICSDate(booking.checkIn)
-
-    // Booking.com REQUIRES checkout + 1 day
-    const dtEnd = toICSDate(addDays(booking.checkOut, 1))
-
     events += `
 BEGIN:VEVENT
 UID:${id}-${roomKey}@amorebeach.com
-DTSTAMP:${nowStamp}
-DTSTART;VALUE=DATE:${dtStart}
-DTEND;VALUE=DATE:${dtEnd}
+DTSTAMP:${now}
+DTSTART;VALUE=DATE:${toICSDate(booking.checkIn)}
+DTEND;VALUE=DATE:${toICSDate(addDays(booking.checkOut, 1))}
 SUMMARY:Booked
 STATUS:CONFIRMED
 END:VEVENT`
@@ -63,19 +48,15 @@ END:VCALENDAR`
 
 export default async function handler(req, res) {
   const { room } = req.query
-  const roomKey = room || "room1"
 
   try {
     const snap = await get(dbRef(rtdb, "reservations"))
     const reservations = snap.val() || {}
 
-    const ical = buildICal(reservations, roomKey)
+    const ical = buildICal(reservations, room)
 
     res.setHeader("Content-Type", "text/calendar; charset=utf-8")
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${roomKey}.ics"`
-    )
+    res.setHeader("Cache-Control", "no-store")
     res.status(200).send(ical)
   } catch (err) {
     console.error("iCal error:", err)
