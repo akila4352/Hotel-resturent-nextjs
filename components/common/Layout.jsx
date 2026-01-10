@@ -10,14 +10,7 @@ const Layout = (props) => {
   const showOverlay = true;
   return (
     <>
-      {showOverlay && (
-        <div className="payment-block-overlay">
-          <div className="payment-block-message">
-            <h1>Site Closed</h1>
-            <p>Access is temporarily disabled.<br/>Development payment not received.</p>
-          </div>
-        </div>
-      )}
+      
       <Header />
       <main>{props.children}</main>
       {!isAdmin && <Footer />}
