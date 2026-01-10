@@ -16,7 +16,7 @@ export default function ReservationPage() {
 
   const [ci, setCi] = useState(null)
   const [co, setCo] = useState(null)
-  useEffect(() => { 
+  useEffect(() => {  
     try {
       if (checkIn) setCi(parseISO(String(checkIn)))
       if (checkOut) setCo(parseISO(String(checkOut)))

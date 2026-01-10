@@ -1,65 +1,50 @@
-import { rtdb } from "@/lib/firebase"
-import { ref as dbRef, get } from "firebase/database"
-
 function toICSDate(dateStr) {
-  return new Date(dateStr).toISOString().slice(0, 10).replace(/-/g, "")
+  const d = new Date(dateStr)
+  return d.toISOString().slice(0, 10).replace(/-/g, "")
 }
 
 function addDays(dateStr, days) {
   const d = new Date(dateStr)
   d.setDate(d.getDate() + days)
-  return d
+  return d.toISOString().slice(0, 10)
 }
 
-function buildICal(reservations, roomKey) {
-  let events = ""
-  const roomNumber = roomKey.replace("room", "")
+export default function handler(req, res) {
+  const { roomId, checkIn, checkOut } = req.query
+
+  // 🔴 Validate input
+  if (!roomId || !checkIn || !checkOut) {
+    return res
+      .status(400)
+      .send("roomId, checkIn and checkOut are required")
+  }
+
   const now =
     new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
 
-  Object.entries(reservations || {}).forEach(([id, booking]) => {
-    if (!booking?.checkIn || !booking?.checkOut) return
-    if (!Array.isArray(booking.selectedRooms)) return
-
-    const match = booking.selectedRooms.some(
-      r => String(r.id) === roomNumber
-    )
-    if (!match) return
-
-    events += `
+  const event = `
 BEGIN:VEVENT
-UID:${id}-${roomKey}@amorebeach.com
+UID:${roomId}-${checkIn}@amorebeach.com
 DTSTAMP:${now}
-DTSTART;VALUE=DATE:${toICSDate(booking.checkIn)}
-DTEND;VALUE=DATE:${toICSDate(addDays(booking.checkOut, 1))}
+DTSTART;VALUE=DATE:${toICSDate(checkIn)}
+DTEND;VALUE=DATE:${toICSDate(addDays(checkOut, 1))}
 SUMMARY:Booked
-STATUS:CONFIRMED
-END:VEVENT`
-  })
+END:VEVENT
+`
 
-  return `BEGIN:VCALENDAR
+  const ics = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Amore Beach//Booking Calendar//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-${events}
+${event}
 END:VCALENDAR`
-}
 
-export default async function handler(req, res) {
-  const { room } = req.query
+  res.setHeader("Content-Type", "text/calendar; charset=utf-8")
+  res.setHeader(
+    "Content-Disposition",
+    `inline; filename="${roomId}.ics"`
+  )
 
-  try {
-    const snap = await get(dbRef(rtdb, "reservations"))
-    const reservations = snap.val() || {}
-
-    const ical = buildICal(reservations, room)
-
-    res.setHeader("Content-Type", "text/calendar; charset=utf-8")
-    res.setHeader("Cache-Control", "no-store")
-    res.status(200).send(ical)
-  } catch (err) {
-    console.error("iCal error:", err)
-    res.status(500).send("Failed to generate calendar")
-  }
+  res.status(200).send(ics)
 }
