@@ -280,40 +280,56 @@ export default function BookingBox({
 
   // navigate to reservation page
   const onBookNow = async () => {
-    if (submitting || syncing) return
-    
+    if (submitting || syncing) return;
     if (!options?.roomType) {
-      alert("Please select a room type before booking.")
-      return
+      alert("Please select a room type before booking.");
+      return;
     }
-    
-    let start = range && range[0] && range[0].startDate
-    let end = range && range[0] && range[0].endDate
-    
+    let start = range && range[0] && range[0].startDate;
+    let end = range && range[0] && range[0].endDate;
     if (start && end && start.toDateString() === end.toDateString()) {
-      end = new Date(start)
-      end.setDate(end.getDate() + 1)
+      end = new Date(start);
+      end.setDate(end.getDate() + 1);
     }
-    
-    const checkIn = start ? format(start, "yyyy-MM-dd") : ""
-    const checkOut = end ? format(end, "yyyy-MM-dd") : ""
+    const checkIn = start ? format(start, "yyyy-MM-dd") : "";
+    const checkOut = end ? format(end, "yyyy-MM-dd") : "";
 
     // Validate dates are not blocked
-    const currentDate = new Date(start)
-    const endDate = new Date(end)
-    const hasBlockedDate = []
+    const currentDate = new Date(start);
+    const endDate = new Date(end);
+    const hasBlockedDate = [];
     while (currentDate <= endDate) {
-      const dateStr = format(currentDate, "yyyy-MM-dd")
+      const dateStr = format(currentDate, "yyyy-MM-dd");
       if (blockedSet.has(dateStr)) {
-        hasBlockedDate.push(format(currentDate, "dd MMM yyyy"))
+        hasBlockedDate.push(format(currentDate, "dd MMM yyyy"));
       }
-      currentDate.setDate(currentDate.getDate() + 1)
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     if (hasBlockedDate.length > 0) {
-      alert(`The following dates are already booked: ${hasBlockedDate.join(", ")}. Please select different dates.`)
-      return
+      alert(`The following dates are already booked: ${hasBlockedDate.join(", ")}. Please select different dates.`);
+      return;
     }
-    
+
+    // Save booking to server storage before redirect
+    setSyncing(true);
+    try {
+      const guest = "Anonymous"; // Replace with real guest info if available
+      await fetch("/api/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId: options.roomType,
+          checkIn,
+          checkOut,
+          guest,
+        }),
+      });
+    } catch (err) {
+      setSyncing(false);
+      alert("Failed to save booking. Please try again.");
+      return;
+    }
+
     const query = {
       checkIn,
       checkOut,
@@ -321,10 +337,9 @@ export default function BookingBox({
       children: String(options?.children ?? 0),
       rooms: String(options?.room ?? 1),
       roomType: String(options?.roomType ?? ""),
-    }
+    };
 
     // Sync calendar before navigating
-    setSyncing(true)
     try {
       const iCalUrl = iCalMap[(options?.roomType || "").toLowerCase()]
       if (iCalUrl && !iCalUrl.startsWith("/")) {

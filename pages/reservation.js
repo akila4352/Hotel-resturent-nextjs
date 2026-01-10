@@ -366,7 +366,7 @@ export default function ReservationPage() {
       setSaved(true)
       setSubmitting(false)
       setTimeout(() => {
-        router.push("/").catch(() => {})
+        router.push("/").catch(() => {}) 
       }, 1200)
     } catch (err) {
       console.error("Failed saving reservation:", err)
