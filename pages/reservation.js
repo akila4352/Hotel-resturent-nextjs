@@ -136,6 +136,7 @@ export default function ReservationPage() {
   const handleBack = () => setStep(1)
 
   const [recaptchaToken, setRecaptchaToken] = useState(null);
+  const [recaptchaError, setRecaptchaError] = useState("");
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
 
   const handleSubmit = async (e) => {
@@ -164,6 +165,9 @@ export default function ReservationPage() {
 
     if (!recaptchaToken) {
       errors.push("Please complete the reCAPTCHA.");
+      setRecaptchaError("Please complete the reCAPTCHA.");
+    } else {
+      setRecaptchaError("");
     }
 
     if (errors.length > 0) {
@@ -177,15 +181,17 @@ export default function ReservationPage() {
       const recaptchaRes = await fetch("/api/verify-recaptcha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: recaptchaToken, gmail: form.email, message: "Reservation attempt" }),
+        body: JSON.stringify({ token: recaptchaToken }),
       });
       const recaptchaJson = await recaptchaRes.json();
       if (!recaptchaJson.success) {
         setSubmitting(false);
-        alert("reCAPTCHA verification failed. Please try again.");
+        setRecaptchaError("reCAPTCHA verification failed. Please try again.");
         setRecaptchaToken(null);
+        alert("reCAPTCHA verification failed. Please try again.");
         return;
       }
+      setRecaptchaError("");
 
       // Calculate room numbers and total price
       const bookedRooms = selectedRooms.length
@@ -710,8 +716,18 @@ export default function ReservationPage() {
                       {siteKey && (
                         <ReCAPTCHA
                           sitekey={siteKey}
-                          onChange={token => setRecaptchaToken(token)}
+                          onChange={token => {
+                            setRecaptchaToken(token);
+                            setRecaptchaError("");
+                          }}
+                          onExpired={() => {
+                            setRecaptchaToken(null);
+                            setRecaptchaError("reCAPTCHA expired. Please try again.");
+                          }}
                         />
+                      )}
+                      {recaptchaError && (
+                        <div style={{ color: "#dc2626", fontSize: 13, marginTop: 4 }}>{recaptchaError}</div>
                       )}
                     </div>
                   </div>
