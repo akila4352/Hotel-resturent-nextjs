@@ -1,71 +1,84 @@
 import { rtdb } from "@/lib/firebase"
 import { ref as dbRef, get } from "firebase/database"
 
-function formatDate(dateStr) {
+/**
+ * Format date to YYYYMMDD (iCal DATE)
+ */
+function toICSDate(dateStr) {
   const d = new Date(dateStr)
   return d.toISOString().slice(0, 10).replace(/-/g, "")
 }
 
+/**
+ * Add days to date
+ */
 function addDays(dateStr, days) {
   const d = new Date(dateStr)
   d.setDate(d.getDate() + days)
   return d
 }
 
-function buildICal(reservations, roomType) {
+/**
+ * Build iCal string
+ */
+function buildICal(reservations, roomKey) {
   let events = ""
-  const typeNumber = roomType.replace("room", "")
-  Object.entries(reservations).forEach(([id, booking]) => {
-    if (!booking.selectedRooms || !Array.isArray(booking.selectedRooms)) return
-    // Match by room id (number or string)
-    const hasRoom = booking.selectedRooms.some(
-      room =>
-        String(room.id) === typeNumber ||
-        String(room.id) === roomType ||
-        String(room.id) === String(roomType.replace("room", ""))
+  const roomNumber = roomKey.replace("room", "") // room1 -> 1
+  const nowStamp =
+    new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
+
+  Object.entries(reservations || {}).forEach(([id, booking]) => {
+    if (!booking?.checkIn || !booking?.checkOut) return
+    if (!Array.isArray(booking.selectedRooms)) return
+
+    const match = booking.selectedRooms.some(
+      r => String(r.id) === roomNumber
     )
-    if (!hasRoom) return
-    if (!booking.checkIn || !booking.checkOut) return
-    const dtstart = formatDate(booking.checkIn)
-    // Booking.com expects DTEND to be the day after checkout
-    const dtend = formatDate(addDays(booking.checkOut, 1))
-    const dtstamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z"
-    events +=
-`BEGIN:VEVENT
-UID:${id}-${roomType}@amorebeach.com
-DTSTAMP:${dtstamp}
-DTSTART;VALUE=DATE:${dtstart}
-DTEND;VALUE=DATE:${dtend}
+    if (!match) return
+
+    const dtStart = toICSDate(booking.checkIn)
+
+    // Booking.com REQUIRES checkout + 1 day
+    const dtEnd = toICSDate(addDays(booking.checkOut, 1))
+
+    events += `
+BEGIN:VEVENT
+UID:${id}-${roomKey}@amorebeach.com
+DTSTAMP:${nowStamp}
+DTSTART;VALUE=DATE:${dtStart}
+DTEND;VALUE=DATE:${dtEnd}
 SUMMARY:Booked
-DESCRIPTION:Room reservation
-END:VEVENT
-`
+STATUS:CONFIRMED
+END:VEVENT`
   })
-  return (
-`BEGIN:VCALENDAR
+
+  return `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//YourCompany//YourApp//EN
+PRODID:-//Amore Beach//Booking Calendar//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-${events}END:VCALENDAR`
-  )
+${events}
+END:VCALENDAR`
 }
 
 export default async function handler(req, res) {
   const { room } = req.query
-  const roomType = room || "room1"
-  let reservations = {}
+  const roomKey = room || "room1"
+
   try {
-    const snapshot = await get(dbRef(rtdb, "reservations"))
-    reservations = snapshot.val() || {}
-    // Debug: log how many reservations and the roomType
-    console.log(`[iCal] Loaded ${Object.keys(reservations).length} reservations for roomType: ${roomType}`)
+    const snap = await get(dbRef(rtdb, "reservations"))
+    const reservations = snap.val() || {}
+
+    const ical = buildICal(reservations, roomKey)
+
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8")
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${roomKey}.ics"`
+    )
+    res.status(200).send(ical)
   } catch (err) {
-    reservations = {}
-    console.error("[iCal] Error loading reservations:", err)
+    console.error("iCal error:", err)
+    res.status(500).send("Failed to generate calendar")
   }
-  const ical = buildICal(reservations, roomType)
-  res.setHeader("Content-Type", "text/calendar; charset=utf-8")
-  res.setHeader("Content-Disposition", `attachment; filename="${roomType}.ics"`)
-  res.status(200).send(ical)
 }
