@@ -7,7 +7,7 @@ import { rooms as roomOptions } from "@/sections/Rooms"
 import ProgressBar from "../components/ProgressBar"
 import dynamic from "next/dynamic"
 const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), { ssr: false })
-
+ 
 export default function ReservationPage() {
   const router = useRouter()
   const { checkIn, checkOut, adults = "1", children = "0", rooms = "1", roomType: qRoomType } = router.query

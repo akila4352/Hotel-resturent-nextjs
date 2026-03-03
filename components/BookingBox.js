@@ -1,351 +1,61 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useState } from "react"
 import { DateRange } from "react-date-range"
 import { format } from "date-fns"
 import { useRouter } from "next/router"
-import { rtdb } from "@/lib/firebase"
-import { ref as dbRef, onValue } from "firebase/database"
-import { rooms as roomOptions } from "@/sections/Rooms"
 
 export default function BookingBox({
   bookingRef,
   calendarRef,
   isFixed,
-  absTop, 
+  absTop,
   openDate,
   setOpenDate,
   range,
   setRange,
   options,
   handleOption,
-  handleRoomType,
-  handleBookNow,
   submitting,
-  forceStatic = false,   
+  forceStatic = false,
 }) {
   const router = useRouter()
   const formattedDate = (d) => (d ? format(d, "dd LLL yyyy").toUpperCase() : "")
 
-  // mapping roomType -> iCal URL
-  const iCalMap = {
-    room3: "https://ical.booking.com/v1/export?t=73ce2feb-f14e-4dcf-9b5a-fc1a8ab77e93",
-    room2: "https://ical.booking.com/v1/export?t=81738c6a-5b4b-4bd5-88ae-4db019416af1",
-    room5: "https://ical.booking.com/v1/export?t=5ebac038-e813-4086-88ed-a4bec6ad89c6",
-    room1: "https://ical.booking.com/v1/export?t=b181e944-f97c-4ae6-a55c-a21b22503943",
-    room4: "https://ical.booking.com/v1/export?t=1a3b1864-b158-4d8f-966a-5b29a29fecd3",
-    room6: "https://ical.booking.com/v1/export?t=6267f28f-da20-436e-8d42-7f6d1fce4623",
-  }
-
-  // blocked dates from iCal (Booking.com) 
-  const [iCalBlockedDates, setICalBlockedDates] = useState([])
-  
-  // blocked dates from Firebase reservations
-  const [firebaseBlockedDates, setFirebaseBlockedDates] = useState([])
-  
-  // combined blocked dates
-  const blockedDates = useMemo(() => {
-    return [...iCalBlockedDates, ...firebaseBlockedDates]
-  }, [iCalBlockedDates, firebaseBlockedDates])
-
-  // Set of blocked date strings for quick lookup
-  const blockedSet = useMemo(() => {
-    const s = new Set()
-    blockedDates.forEach((d) => s.add(d.toISOString().slice(0, 10)))
-    return s
-  }, [blockedDates])
- 
-  // local flag to prevent double-clicks while calendar sync is running
-  const [syncing, setSyncing] = useState(false)
-
-  // when the user clicks the date pill/calendar icon: toggle the calendar UI
   const onDateToggle = () => {
     try {
       setOpenDate((s) => !s)
     } catch (e) {
       console.warn("setOpenDate unavailable", e)
     }
-  } 
-
-  // parse simple iCal: extract DTSTART/DTEND from VEVENTs
-  const parseICal = async (text) => {
-    const lines = text.split(/\r?\n/)
-    const events = []
-    let inEvent = false
-    let cur = {}
-    
-    for (let raw of lines) {
-      const line = raw.trim()
-      if (!line) continue
-      
-      if (line === "BEGIN:VEVENT") {
-        inEvent = true
-        cur = { status: "CONFIRMED" }
-        continue
-      }
-      
-      if (line === "END:VEVENT") {
-        inEvent = false
-        if (cur.status && String(cur.status).toUpperCase() === "CANCELLED") {
-          cur = {}
-          continue
-        }
-        if (cur.dtstart) {
-          events.push({ 
-            dtstart: cur.dtstart, 
-            dtend: cur.dtend || cur.dtstart, 
-            summary: cur.summary || "" 
-          })
-        }
-        cur = {}
-        continue
-      }
-      
-      if (!inEvent) continue
-
-      if (line.toUpperCase().startsWith("DTSTART")) {
-        const idx = line.indexOf(":")
-        if (idx !== -1) cur.dtstart = line.slice(idx + 1)
-        continue
-      }
-      if (line.toUpperCase().startsWith("DTEND")) {
-        const idx = line.indexOf(":")
-        if (idx !== -1) cur.dtend = line.slice(idx + 1)
-        continue
-      }
-      if (line.toUpperCase().startsWith("STATUS")) {
-        const idx = line.indexOf(":")
-        if (idx !== -1) cur.status = line.slice(idx + 1)
-        continue
-      }
-      if (line.toUpperCase().startsWith("SUMMARY")) {
-        const idx = line.indexOf(":")
-        if (idx !== -1) cur.summary = line.slice(idx + 1)
-        continue
-      }
-    }
-
-    const out = []
-    const toDate = (val) => {
-      if (!val) return null
-      const m = val.match(/^(\d{4})(\d{2})(\d{2})/)
-      if (m) {
-        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-      }
-      const dd = new Date(val)
-      return isNaN(dd.getTime()) ? null : dd
-    }
-
-    const addDays = (d, n) => {
-      const x = new Date(d)
-      x.setDate(x.getDate() + n)
-      return x
-    }
-
-    for (const ev of events) {
-      const s = toDate(ev.dtstart)
-      let e = toDate(ev.dtend)
-      if (!s) continue
-      if (e) e = addDays(e, -1)
-      else e = s
-      for (let d = new Date(s); d <= e; d = addDays(d, 1)) {
-        out.push(new Date(d))
-      }
-    }
-    return out
   }
 
-  // Fetch Firebase reservations and block dates for selected room type
-  useEffect(() => {
-    const type = (options?.roomType || "").toLowerCase()
-    if (!type) {
-      setFirebaseBlockedDates([])
-      return
-    }
-
-    const bookingsRef = dbRef(rtdb, "reservations")
-    
-    const unsubscribe = onValue(
-      bookingsRef, 
-      (snapshot) => {
-        try {
-          const data = snapshot.val()
-          
-          if (!data) {
-            console.log("Firebase: No reservations found in database")
-            setFirebaseBlockedDates([])
-            return
-          }
-
-          const blocked = []
-          let matchedBookings = 0
-          
-          Object.entries(data).forEach(([bookingId, booking]) => {
-            try {
-              console.log(`Checking booking ${bookingId}:`, {
-                selectedRooms: booking.selectedRooms,
-                checkIn: booking.checkIn,
-                checkOut: booking.checkOut
-              })
-              
-              if (!booking.selectedRooms || !Array.isArray(booking.selectedRooms)) {
-                console.warn(`Booking ${bookingId}: Missing selectedRooms array`)
-                return
-              }
-
-              const typeNumber = type.replace("room", "")
-              
-              const hasMatchingRoom = booking.selectedRooms.some(room => {
-                const roomId = String(room.id || "")
-                const matches = roomId === typeNumber || roomId === type
-                console.log(`  Room ID ${roomId} vs ${type} (${typeNumber}): ${matches}`)
-                return matches
-              })
-
-              if (hasMatchingRoom) {
-                matchedBookings++
-                
-                const checkInStr = booking.checkIn
-                const checkOutStr = booking.checkOut
-                
-                if (!checkInStr || !checkOutStr) {
-                  return
-                }
-
-                const startDate = new Date(checkInStr)
-                const endDate = new Date(checkOutStr)
-                
-                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                  return
-                }
-                
-                const currentDate = new Date(startDate)
-                while (currentDate <= endDate) {
-                  blocked.push(new Date(currentDate))
-                  currentDate.setDate(currentDate.getDate() + 1)
-                }
-              }
-            } catch (err) {
-              console.error(`Error processing booking ${bookingId}:`, err)
-            }
-          })
-
-          setFirebaseBlockedDates(blocked)
-          console.log(`Firebase: Found ${matchedBookings} bookings for ${type}`)
-          console.log(`Firebase: Blocked ${blocked.length} dates for ${type}`)
-        } catch (err) {
-          console.error("Firebase: Error fetching reservations:", err)
-          setFirebaseBlockedDates([])
-        }
-      },
-      (error) => {
-        console.error("Firebase: Database read failed:", error)
-        setFirebaseBlockedDates([])
-      }
-    )
-
-    return () => unsubscribe()
-  }, [options?.roomType])
-
-  // Fetch iCal when roomType changes
-  useEffect(() => {
-    const type = (options?.roomType || "").toLowerCase()
-    if (!type) {
-      setICalBlockedDates([])
-      return
-    }
-    const url = iCalMap[type]
-    if (!url) {
-      setICalBlockedDates([])
-      return
-    }
-    let cancelled = false
-    ;(async () => {
-      try {
-        const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(url)}`
-        const res = await fetch(proxyUrl)
-        if (!res.ok) throw new Error("Failed to fetch iCal via proxy")
-        const text = await res.text()
-        if (cancelled) return
-        const parsed = await parseICal(text)
-        if (!cancelled) {
-          setICalBlockedDates(parsed)
-          console.log(`iCal: Blocked ${parsed.length} dates for ${type}`)
-        }
-      } catch (err) {
-        console.error("iCal fetch/parse error:", err)
-        if (!cancelled) setICalBlockedDates([])
-      }
-    })()
-    return () => { cancelled = true }
-  }, [options?.roomType])
-
-  // navigate to reservation page
-  const onBookNow = async () => {
-    if (submitting || syncing) return
-    
-    if (!options?.roomType) {
-      alert("Please select a room type before booking.")
-      return
-    }
-    
+  const onCheckAvailability = () => {
     let start = range && range[0] && range[0].startDate
     let end = range && range[0] && range[0].endDate
-    
+
+    if (!start || !end) {
+      alert("Please select check-in and check-out dates.")
+      return
+    }
+
     if (start && end && start.toDateString() === end.toDateString()) {
       end = new Date(start)
       end.setDate(end.getDate() + 1)
     }
-    
-    const checkIn = start ? format(start, "yyyy-MM-dd") : ""
-    const checkOut = end ? format(end, "yyyy-MM-dd") : ""
 
-    // Validate dates are not blocked
-    const currentDate = new Date(start)
-    const endDate = new Date(end)
-    const hasBlockedDate = []
-    while (currentDate <= endDate) {
-      const dateStr = format(currentDate, "yyyy-MM-dd")
-      if (blockedSet.has(dateStr)) {
-        hasBlockedDate.push(format(currentDate, "dd MMM yyyy"))
-      }
-      currentDate.setDate(currentDate.getDate() + 1)
-    }
-    if (hasBlockedDate.length > 0) {
-      alert(`The following dates are already booked: ${hasBlockedDate.join(", ")}. Please select different dates.`)
-      return
-    }
-    
-    const query = {
-      checkIn,
-      checkOut,
-      adults: String(options?.adult ?? 1),
-      children: String(options?.children ?? 0),
-      rooms: String(options?.room ?? 1),
-      roomType: String(options?.roomType ?? ""),
-    }
+    const checkIn = format(start, "yyyy-MM-dd")
+    const checkOut = format(end, "yyyy-MM-dd")
 
-    // Sync calendar before navigating
-    setSyncing(true)
-    try {
-      const iCalUrl = iCalMap[(options?.roomType || "").toLowerCase()]
-      if (iCalUrl && !iCalUrl.startsWith("/")) {
-        const proxyUrl = `/api/fetch-ical?url=${encodeURIComponent(iCalUrl)}`
-        const res = await fetch(proxyUrl)
-        if (res.ok) {
-          const text = await res.text()
-          const parsed = await parseICal(text)
-          setICalBlockedDates(parsed)
-          console.log(`Calendar sync complete. ${parsed.length} blocked dates.`)
-        }
-      }
-    } catch (err) {
-      console.error("Calendar sync error:", err)
-    } finally {
-      setSyncing(false)
-      router.push({ pathname: "/reservation", query })
-    } 
+    router.push({
+      pathname: "/availability",
+      query: {
+        checkIn,
+        checkOut,
+        adults: String(options?.adult ?? 1),
+        children: String(options?.children ?? 0),
+      },
+    })
   }
 
-  // Compute wrapper position
   const isStatic = !!forceStatic
   const wrapperStyle = {
     position: isStatic ? "static" : isFixed ? "fixed" : "absolute",
@@ -362,49 +72,6 @@ export default function BookingBox({
     padding: isStatic ? "8px 0" : 4,
     width: isStatic ? "100%" : undefined,
     boxSizing: isStatic ? "border-box" : undefined,
-  }
-
-  // Get selected room details for max adults/children validation
-  const selectedRoom = useMemo(() => {
-    if (!options?.roomType) return null
-    return roomOptions.find(
-      (r) => String(r.type).toLowerCase() === String(options.roomType).toLowerCase()
-    )
-  }, [options?.roomType])
-
-  // Helper to get max adults/children for selected room
-  const maxAdults = selectedRoom?.maxAdults ?? 4
-  const maxChildren = selectedRoom?.maxChildren ?? 2
-  const minAdults = selectedRoom?.minAdults ?? 1
-  const minChildren = selectedRoom?.minChildren ?? 0
-
-  // Validation for increment/decrement
-  const handleOptionValidated = (type, op) => {
-    if (!selectedRoom) {
-      handleOption(type, op)
-      return
-    }
-    if (type === "adult") {
-      if (op === "i" && options.adult >= maxAdults) {
-        alert(`Maximum adults for this room is ${maxAdults}.`)
-        return
-      }
-      if (op === "d" && options.adult <= minAdults) {
-        alert(`Minimum adults for this room is ${minAdults}.`)
-        return
-      }
-    }
-    if (type === "children") {
-      if (op === "i" && options.children >= maxChildren) {
-        alert(`Maximum children for this room is ${maxChildren}.`)
-        return
-      }
-      if (op === "d" && options.children <= minChildren) {
-        alert(`Minimum children for this room is ${minChildren}.`)
-        return
-      }
-    }
-    handleOption(type, op)
   }
 
   return (
@@ -430,37 +97,7 @@ export default function BookingBox({
           width: isStatic ? "100%" : undefined,
         }}
       >
-        {/* Room type select is FIRST */}
-        <div style={{ display: "flex", alignItems: "center", width: isStatic ? "100%" : "auto" }}>
-          <select
-            name="roomType"
-            value={options.roomType || ""}
-            onChange={(e) => handleRoomType && handleRoomType(e.target.value)}
-            aria-label="Select room type"
-            style={{
-              padding: "10px 12px",
-              borderRadius: 0,
-              border: "0.5px solid rgba(11,18,32,0.08)",
-              background: "white",
-              fontWeight: 700,
-              fontSize: 13,
-              height: 44,
-              width: isStatic ? "100%" : "auto",
-              minWidth: isStatic ? "auto" : 140,
-            }}
-            required
-          >
-            <option value="">Room Type</option>
-            <option value="room3">ROOM-3. Relax Deluxe</option>
-            <option value="room2">ROOM-2. Antik room</option>
-            <option value="room5">ROOM-5. No Air Conditioning With Fan</option>
-            <option value="room1">ROOM-1. Family Room</option>
-            <option value="room4">ROOM-4. Deluxe room</option>
-            <option value="room6">ROOM-6. Non Air conditioning With Fan</option>
-          </select>
-        </div>
-
-        {/* Date pill is SECOND */}
+        {/* Date pill */}
         <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap", width: isStatic ? "100%" : "auto" }}>
           <button
             type="button"
@@ -499,7 +136,7 @@ export default function BookingBox({
           </button>
         </div>
 
-        {/* Controls: Adult and Children ONLY (Room removed) */}
+        {/* Guest controls */}
         <div className="booking-controls" style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap", width: isStatic ? "100%" : "auto" }}>
           {/* Adult group */}
           <div className="group" style={{ display: "flex", alignItems: "center", gap: 6, background: "white", padding: "8px 10px", borderRadius: 0, border: "0.5px solid rgba(11,18,32,0.08)", width: isStatic ? "100%" : "auto", minWidth: isStatic ? "auto" : 130, height: 44, justifyContent: "space-between" }}>
@@ -514,7 +151,7 @@ export default function BookingBox({
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <button
-                onClick={() => handleOptionValidated("adult", "d")}
+                onClick={() => handleOption("adult", "d")}
                 style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, minWidth: 28, minHeight: 28 }}
                 aria-label="Decrease adults"
               >
@@ -524,7 +161,7 @@ export default function BookingBox({
               </button>
               <span style={{ minWidth: 24, textAlign: "center", color: "#000", fontSize: 14, fontWeight: 700 }}>{options.adult}</span>
               <button
-                onClick={() => handleOptionValidated("adult", "i")}
+                onClick={() => handleOption("adult", "i")}
                 style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, minWidth: 28, minHeight: 28 }}
                 aria-label="Increase adults"
               >
@@ -548,13 +185,13 @@ export default function BookingBox({
               <label style={{ fontSize: 11, color: "#000", fontWeight: 700 }}>Children</label>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <button onClick={() => handleOptionValidated("children", "d")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 28, minHeight: 28 }} aria-label="Decrease children">
+              <button onClick={() => handleOption("children", "d")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 28, minHeight: 28 }} aria-label="Decrease children">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                   <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
                 </svg>
               </button>
               <span style={{ minWidth: 24, textAlign: "center", color: "#000", fontSize: 14, fontWeight: 700 }}>{options.children}</span>
-              <button onClick={() => handleOptionValidated("children", "i")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 28, minHeight: 28 }} aria-label="Increase children">
+              <button onClick={() => handleOption("children", "i")} style={{ padding: 6, borderRadius: 0, background: "transparent", border: "0.5px solid rgba(11,18,32,0.08)", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 28, minHeight: 28 }} aria-label="Increase children">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#000", fill: "#000", stroke: "#000" }}>
                   <rect x="11" y="4" width="2" height="16" rx="1" fill="currentColor"/>
                   <rect x="4" y="11" width="16" height="2" rx="1" fill="currentColor"/>
@@ -564,10 +201,10 @@ export default function BookingBox({
           </div>
         </div>
 
-        {/* Book Now button */}
+        {/* Check Availability button */}
         <button
-          onClick={onBookNow}
-          disabled={submitting || syncing}
+          onClick={onCheckAvailability}
+          disabled={submitting}
           className="booking-cta"
           style={{
             background: "linear-gradient(90deg,#ff7a59,#ffbf69)",
@@ -578,15 +215,15 @@ export default function BookingBox({
             fontWeight: 700,
             fontSize: 13,
             height: 44,
-            opacity: submitting || syncing ? 0.8 : 1,
-            cursor: submitting || syncing ? "wait" : "pointer",
+            opacity: submitting ? 0.8 : 1,
+            cursor: submitting ? "wait" : "pointer",
             marginLeft: isStatic ? 0 : 4,
             width: isStatic ? "100%" : undefined,
-            minWidth: 130,
+            minWidth: 160,
           }}
-          aria-label="Book now"
+          aria-label="Check availability"
         >
-          {submitting ? "Saving..." : "Book Now"}
+          Check Availability
         </button>
       </div>
 
@@ -618,38 +255,11 @@ export default function BookingBox({
               onChange={(item) => setRange([item.selection])}
               moveRangeOnFirstSelection={false}
               minDate={new Date()}
-              disabledDates={blockedDates}
               months={isStatic ? 1 : 2}
               direction={isStatic ? "vertical" : "horizontal"}
               showSelectionPreview={true}
               editableDateInputs={true}
               showMonthAndYearPickers={true}
-              dayContentRenderer={(date) => {
-                const iso = date.toISOString().slice(0, 10)
-                const isBlocked = blockedSet.has(iso)
-                const dayNumber = date.getDate()
-                const style = {
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 36,
-                  height: 36,
-                  borderRadius: 6,
-                  fontSize: 13,
-                } 
-                if (isBlocked) {
-                  return (
-                    <div style={{ ...style, background: "rgba(220,38,38,0.12)", color: "#b91c1c", fontWeight: 700 }}>
-                      {dayNumber}
-                    </div>
-                  )
-                }
-                return (
-                  <div style={{ ...style, color: "#0ea5e9", fontWeight: 700 }}>
-                    {dayNumber}
-                  </div>
-                )
-              }}
               rangeColors={["#3b82f6"]}
             />
           </div>
