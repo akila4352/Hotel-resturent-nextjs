@@ -87,6 +87,7 @@ export default function BookingBox({
           flexDirection: isStatic ? "column" : "row",
           gap: isStatic ? 8 : 4,
           alignItems: isStatic ? "stretch" : "center",
+          justifyContent: isStatic ? "flex-start" : "center",
           flexWrap: "nowrap",
           overflowX: "hidden",
           padding: isStatic ? "12px" : "10px 12px",
