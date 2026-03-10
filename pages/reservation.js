@@ -38,7 +38,7 @@ export default function ReservationPage() {
     list.reduce((s, sr) => (getTypeKey(sr.room) === type ? s + sr.qty : s), 0)
 
   const [typeLimitMessage, setTypeLimitMessage] = useState(null)
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(2)
   const [selectedRoom, setSelectedRoom] = useState(roomOptions[0] || null)
   const [selectedRooms, setSelectedRooms] = useState(() => {
     const qRoom = router.query?.room
@@ -306,8 +306,8 @@ export default function ReservationPage() {
   const StepHeader = () => (
     <div className="step-header">
       <div className="step-container">
-        <div className={`step-circle ${step >= 1 ? "active" : ""} ${step > 1 ? "completed" : ""}`}>
-          {step > 1 ? "✓" : "1"}
+        <div className={`step-circle completed`}>
+          ✓
         </div>
         <div className="step-label-box">
           <span className="step-label">Choose Room</span>
@@ -315,11 +315,11 @@ export default function ReservationPage() {
       </div>
       
       <div className="connector-line">
-        <div className={`connector-fill ${step > 1 ? "filled" : ""}`} />
+        <div className={`connector-fill filled`} />
       </div>
       
       <div className="step-container">
-        <div className={`step-circle ${step >= 2 ? "active" : ""}`}>
+        <div className={`step-circle active`}>
           <span className="heart-icon">♥</span>
         </div>
         <div className="step-label-box">
@@ -736,17 +736,14 @@ export default function ReservationPage() {
 
                     {/* Add reCAPTCHA widget */}
                     <div className="form-field full" style={{ margin: "10px 0" }}>
-                      {siteKey && (
-                        <ReCAPTCHA
-                          sitekey={siteKey}
-                          onChange={token => setRecaptchaToken(token)}
-                        />
-                      )}
+                      <ReCAPTCHA
+                        sitekey={siteKey || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"}
+                        onChange={token => setRecaptchaToken(token)}
+                      />
                     </div>
                   </div>
 
                   <div className="action-row">
-                    <button type="button" onClick={handleBack} className="btn-back">← Back</button>
                     <button type="submit" disabled={submitting} className="btn-submit">{submitting ? "Processing..." : "BOOK RESERVATION"}</button>
                   </div>
                 </form>
